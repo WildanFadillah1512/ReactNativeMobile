@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import {
  View,
  Text,
@@ -21,13 +21,11 @@ import { RootStackParamList } from '../../App';
 type DetailScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Detail'>;
 type DetailScreenRouteProp = RouteProp<RootStackParamList, 'Detail'>;
 
-// Aset Gambar
 const AVATAR_IMAGE = require('../assets/images/labuan_bajo.jpg');
 const SKYTREE_IMAGE = require('../assets/images/seoul.jpg');
 const TOKYO_TOWER_IMAGE = require('../assets/images/tokyo2.jpg');
 const VENICE_CANAL_IMAGE = require('../assets/images/venice.jpg');
 
-// Helper Emoji
 const getEmoji = (location: string) => {
  switch (location) {
   case 'Indonesia': return '🇮🇩';
@@ -38,20 +36,27 @@ const getEmoji = (location: string) => {
  }
 };
 
-// Helper untuk Parsing Harga
-const parsePrice = (priceString: string): number => {
- try {
-  // PERBAIKAN ESLINT: Hapus backslash sebelum forward slash
-  const cleanedString = priceString.replace(/[$,/pax\s]/g, '');
-  const priceNumber = parseInt(cleanedString, 10);
-  return isNaN(priceNumber) ? 150 : priceNumber;
- } catch (error) {
-  console.error("Error parsing price:", error);
-  return 150;
- }
-};
+const parsePriceDetails = (priceString: string): { priceNumber: number; suffix: string } => {
+    try {
+     const numberPart = priceString.replace(/[$,\s]/g, '').match(/^\d+/);
+     const priceNumber = numberPart ? parseInt(numberPart[0], 10) : NaN;
 
-// Data Rekomendasi
+     const suffixPart = priceString.match(/\d+(\D*)$/);
+     const suffix = suffixPart && suffixPart[1] ? suffixPart[1].trim() : '';
+
+     if (isNaN(priceNumber)) {
+         console.warn("Could not parse price number from:", priceString);
+         return { priceNumber: 150, suffix: '/pax' };
+     }
+
+     return { priceNumber, suffix };
+    } catch (error) {
+     console.error("Error parsing price details:", error);
+     return { priceNumber: 150, suffix: '/pax' };
+    }
+   };
+
+
 const RECOMMENDATIONS = [
  {
   id: 'rec1',
@@ -61,6 +66,8 @@ const RECOMMENDATIONS = [
   location: 'Korea Selatan',
   rating: 4.7,
   price: '$20/pax',
+  isLoved: false,
+  lovesCount: 120,
  },
  {
   id: 'rec2',
@@ -70,6 +77,8 @@ const RECOMMENDATIONS = [
   location: 'Jepang',
   rating: 4.8,
   price: '$25/pax',
+  isLoved: false,
+  lovesCount: 150,
  },
  {
   id: 'rec3',
@@ -79,6 +88,8 @@ const RECOMMENDATIONS = [
   location: 'Italia',
   rating: 4.9,
   price: '$80/pax',
+  isLoved: false,
+  lovesCount: 200,
  }
 ];
 
@@ -88,11 +99,14 @@ const DetailScreen = () => {
  const { item } = route.params;
 
  const [quantity, setQuantity] = useState(1);
- const pricePerPerson = parsePrice(item.price || '$150/pax');
+
+ const { priceNumber: pricePerPerson, suffix: priceSuffix } = parsePriceDetails(item.price || '$150/pax');
 
  const handleDecrement = () => { if (quantity > 1) { setQuantity(quantity - 1); } };
  const handleIncrement = () => { setQuantity(quantity + 1); };
- const totalAmount = (pricePerPerson * quantity).toLocaleString('en-US');
+
+ const totalAmountNumber = pricePerPerson * quantity;
+ const totalAmountDisplay = `$${totalAmountNumber.toLocaleString('en-US')}`;
 
  const handleComingSoon = () => { Alert.alert("Under Development", "This feature is still under development", [{ text: "OK" }]); };
 
@@ -181,7 +195,6 @@ const DetailScreen = () => {
     </View>
    </ScrollView>
 
-   {/* Footer Booking */}
    <View style={styles.bookingFooter}>
     <View style={styles.topFooterRow}>
      <View style={styles.quantitySelector}>
@@ -204,8 +217,10 @@ const DetailScreen = () => {
       </Pressable>
      </View>
      <View style={styles.priceDetails}>
-      <Text style={styles.totalAmountLabel}>Total Amount</Text>
-      <Text style={styles.totalAmount}>${totalAmount}</Text>
+       <Text style={styles.totalAmountLabel}>
+        ${pricePerPerson.toLocaleString('en-US')}{priceSuffix} per person
+       </Text>
+       <Text style={styles.totalAmount}>{totalAmountDisplay}</Text>
      </View>
     </View>
     <Pressable
@@ -221,49 +236,48 @@ const DetailScreen = () => {
  );
 };
 
-// Styles (Tidak ada perubahan di sini selain pembersihan sebelumnya)
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#121212' },
-  scrollViewContent: { paddingBottom: 180 },
-  headerImage: { width: '100%', height: 450 },
-  gradient: { flex: 1, paddingHorizontal: 20, paddingTop: 50, justifyContent: 'space-between' },
-  topNav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  backButton: { backgroundColor: 'rgba(255, 255, 255, 0.15)', width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
-  weatherWidget: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255, 255, 255, 0.15)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, height: 40 },
-  weatherIcon: { marginRight: 8 },
-  weatherText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  headerInfo: { paddingBottom: 40 },
-  rating: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 15, alignSelf: 'flex-start', marginBottom: 10 },
-  ratingText: { color: '#fff', marginLeft: 5, fontWeight: 'bold' },
-  title: { fontSize: 52, fontWeight: 'bold', color: '#fff', textShadowColor: 'rgba(0, 0, 0, 0.4)', textShadowOffset: {width: 1, height: 2}, textShadowRadius: 5 },
-  subtitle: { fontSize: 16, color: '#E0E0E0', marginTop: 8, lineHeight: 24 },
-  content: { padding: 20, backgroundColor: '#121212', borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -30 },
-  countryInfo: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
-  emojiText: { fontSize: 24 },
-  countryText: { marginLeft: 10, fontSize: 18, fontWeight: '500', color: '#E0E0E0' },
-  sectionTitle: { fontSize: 22, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 16, marginTop: 8 },
-  reviewCard: { backgroundColor: '#1E1E1E', borderRadius: 12, padding: 16, flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
-  avatar: { width: 45, height: 45, borderRadius: 22.5, marginRight: 16 },
-  reviewerInfo: { flex: 1 },
-  reviewerName: { fontWeight: 'bold', color: '#BDBDBD' },
-  reviewText: { color: '#9E9E9E', marginTop: 4, lineHeight: 20 },
-  viewAllButton: { backgroundColor: '#2C2C2C', paddingVertical: 14, borderRadius: 25, alignItems: 'center', marginBottom: 24 },
-  viewAllText: { fontWeight: 'bold', color: '#FFFFFF' },
-  recommendationCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1E1E1E', borderRadius: 12, padding: 12, marginBottom: 12 },
-  recommendationImage: { width: 90, height: 90, borderRadius: 10 },
-  recommendationDetails: { marginLeft: 16, flex: 1 },
-  recommendationTitle: { fontSize: 18, fontWeight: 'bold', color: '#FFFFFF' },
-  recommendationSubtitle: { fontSize: 14, color: '#BDBDBD', marginTop: 4 },
-  bookingFooter: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#293241', padding: 20, paddingBottom: 30, borderTopLeftRadius: 24, borderTopRightRadius: 24 },
-  topFooterRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  quantitySelector: { flexDirection: 'row', alignItems: 'center' },
-  quantityButton: { width: 30, height: 30, borderRadius: 15, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF' },
-  quantityText: { fontSize: 20, fontWeight: '600', color: '#FFFFFF', marginHorizontal: 16 },
-  priceDetails: { alignItems: 'flex-end' },
-  totalAmountLabel: { color: '#E0E0E0', fontSize: 14, marginBottom: 2 },
-  totalAmount: { color: '#fff', fontSize: 24, fontWeight: 'bold' },
-  bookNowButton: { backgroundColor: '#FF7043', paddingVertical: 16, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
-  bookNowText: { color: '#fff', fontWeight: 'bold', fontSize: 18 },
+ container: { flex: 1, backgroundColor: '#121212' },
+ scrollViewContent: { paddingBottom: 180 },
+ headerImage: { width: '100%', height: 450 },
+ gradient: { flex: 1, paddingHorizontal: 20, paddingTop: 50, justifyContent: 'space-between' },
+ topNav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+ backButton: { backgroundColor: 'rgba(255, 255, 255, 0.15)', width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
+ weatherWidget: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255, 255, 255, 0.15)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, height: 40 },
+ weatherIcon: { marginRight: 8 },
+ weatherText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+ headerInfo: { paddingBottom: 40 },
+ rating: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 15, alignSelf: 'flex-start', marginBottom: 10 },
+ ratingText: { color: '#fff', marginLeft: 5, fontWeight: 'bold' },
+ title: { fontSize: 52, fontWeight: 'bold', color: '#fff', textShadowColor: 'rgba(0, 0, 0, 0.4)', textShadowOffset: {width: 1, height: 2}, textShadowRadius: 5 },
+ subtitle: { fontSize: 16, color: '#E0E0E0', marginTop: 8, lineHeight: 24 },
+ content: { padding: 20, backgroundColor: '#121212', borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -30 },
+ countryInfo: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
+ emojiText: { fontSize: 24 },
+ countryText: { marginLeft: 10, fontSize: 18, fontWeight: '500', color: '#E0E0E0' },
+ sectionTitle: { fontSize: 22, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 16, marginTop: 8 },
+ reviewCard: { backgroundColor: '#1E1E1E', borderRadius: 12, padding: 16, flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+ avatar: { width: 45, height: 45, borderRadius: 22.5, marginRight: 16 },
+ reviewerInfo: { flex: 1 },
+ reviewerName: { fontWeight: 'bold', color: '#BDBDBD' },
+ reviewText: { color: '#9E9E9E', marginTop: 4, lineHeight: 20 },
+ viewAllButton: { backgroundColor: '#2C2C2C', paddingVertical: 14, borderRadius: 25, alignItems: 'center', marginBottom: 24 },
+ viewAllText: { fontWeight: 'bold', color: '#FFFFFF' },
+ recommendationCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1E1E1E', borderRadius: 12, padding: 12, marginBottom: 12 },
+ recommendationImage: { width: 90, height: 90, borderRadius: 10 },
+ recommendationDetails: { marginLeft: 16, flex: 1 },
+ recommendationTitle: { fontSize: 18, fontWeight: 'bold', color: '#FFFFFF' },
+ recommendationSubtitle: { fontSize: 14, color: '#BDBDBD', marginTop: 4 },
+ bookingFooter: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#293241', padding: 20, paddingBottom: 30, borderTopLeftRadius: 24, borderTopRightRadius: 24 },
+ topFooterRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+ quantitySelector: { flexDirection: 'row', alignItems: 'center' },
+ quantityButton: { width: 30, height: 30, borderRadius: 15, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF' },
+ quantityText: { fontSize: 20, fontWeight: '600', color: '#FFFFFF', marginHorizontal: 16 },
+ priceDetails: { alignItems: 'flex-end' },
+ totalAmountLabel: { color: '#E0E0E0', fontSize: 14, marginBottom: 2 },
+ totalAmount: { color: '#fff', fontSize: 24, fontWeight: 'bold' },
+ bookNowButton: { backgroundColor: '#FF7043', paddingVertical: 16, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+ bookNowText: { color: '#fff', fontWeight: 'bold', fontSize: 18 },
 });
 
 export default DetailScreen;

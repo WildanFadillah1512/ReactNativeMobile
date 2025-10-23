@@ -16,7 +16,6 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 
-// --- Palet Warna ---
 const BG_COLOR = '#1C1F2E';
 const CARD_COLOR = '#2B2F42';
 const ACCENT_COLOR = '#FF4136';
@@ -27,10 +26,8 @@ const BORDER_DARK = '#4A4E69';
 const ACCENT_BLUE = '#61AFEF';
 const MODAL_OVERLAY_BG = 'rgba(0, 0, 0, 0.7)';
 
-// --- Tipe Navigasi ---
 type TicketScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Tickets'>;
 
-// --- Data Tiket Dummy ---
 const TICKET_DATA = [
  { id: '1', airline: 'SKY Airlines', fromCode: 'CGK', fromCity: 'Jakarta', toCode: 'DPS', toCity: 'Denpasar', departureTime: '7:00am', departureDate: 'Sat, 21 Jun', arrivalTime: '9:50am', arrivalDate: 'Sat, 21 Jun', price: '$150' },
  { id: '2', airline: 'Ocean Air', fromCode: 'CGK', fromCity: 'Jakarta', toCode: 'DPS', toCity: 'Denpasar', departureTime: '10:30am', departureDate: 'Sat, 21 Jun', arrivalTime: '1:20pm', arrivalDate: 'Sat, 21 Jun', price: '$185' },
@@ -38,11 +35,9 @@ const TICKET_DATA = [
  { id: '4', airline: 'SKY Airlines', fromCode: 'CGK', fromCity: 'Jakarta', toCode: 'DPS', toCity: 'Denpasar', departureTime: '8:00pm', departureDate: 'Sat, 21 Jun', arrivalTime: '10:50pm', arrivalDate: 'Sat, 21 Jun', price: '$175' },
 ];
 
-// --- Opsi untuk Modal ---
 const LOCATION_OPTIONS = ['Netherlands', 'Indonesia', 'Japan', 'South Korea', 'Italy'];
 const DATE_OPTIONS = ['June, 2025', 'July, 2025', 'August, 2025', 'May, 2025', 'April, 2025', 'March, 2025'];
 
-// --- Komponen Kartu Tiket ---
 const TicketCard = ({ item }: { item: typeof TICKET_DATA[0] }) => {
  return (
   <View style={styles.card}>
@@ -80,8 +75,6 @@ const TicketCard = ({ item }: { item: typeof TICKET_DATA[0] }) => {
  );
 };
 
-
-// --- Komponen Screen Utama ---
 const TicketScreen = () => {
  const navigation = useNavigation<TicketScreenNavigationProp>();
  const [activeFilter, setActiveFilter] = useState('Aircraft');
@@ -113,92 +106,81 @@ const TicketScreen = () => {
   <SafeAreaView style={styles.safeArea}>
    <StatusBar barStyle="light-content" backgroundColor={BG_COLOR} />
 
-   {/* Header */}
    <View style={styles.header}>
-       {/* ... (Header content remains the same) ... */}
-         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
-           <Icon name="angle-left" size={24} color={TEXT_PRIMARY} />
-         </TouchableOpacity>
-         <Text style={styles.headerTitle}>Tickets</Text>
-         <TouchableOpacity onPress={() => { /* Logika menu */ }} style={styles.headerButton}>
-           <Icon name="ellipsis-v" size={20} color={TEXT_PRIMARY} />
-         </TouchableOpacity>
+    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+     <Icon name="angle-left" size={24} color={TEXT_PRIMARY} />
+    </TouchableOpacity>
+    <Text style={styles.headerTitle}>Tickets</Text>
+    <TouchableOpacity onPress={() => { /* Logika menu */ }} style={styles.headerButton}>
+     <Icon name="ellipsis-v" size={20} color={TEXT_PRIMARY} />
+    </TouchableOpacity>
    </View>
 
-   {/* Konten Utama */}
    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-       {/* ... (Location, Filter, Calendar, Ticket Results remain the same) ... */}
-         {/* Location Dropdown */}
-     <View style={styles.section}>
-      <Text style={styles.sectionLabel}>Current locations</Text>
-      <TouchableOpacity style={styles.dropdown} onPress={() => setLocationPickerVisible(true)}>
-       <Text style={styles.dropdownText}>{currentLocation}</Text>
-       <Icon name="angle-down" size={20} color={TEXT_PRIMARY} />
-      </TouchableOpacity>
-     </View>
+    <View style={styles.section}>
+     <Text style={styles.sectionLabel}>Current locations</Text>
+     <TouchableOpacity style={styles.dropdown} onPress={() => setLocationPickerVisible(true)}>
+      <Text style={styles.dropdownText}>{currentLocation}</Text>
+      <Icon name="angle-down" size={20} color={TEXT_PRIMARY} />
+     </TouchableOpacity>
+    </View>
 
-     {/* Filter Chips */}
-     <View style={styles.filterContainer}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
-       {filters.map((filter) => (
-        <TouchableOpacity
-         key={filter}
-         style={[styles.filterChip, activeFilter === filter && styles.filterChipActive]}
-         onPress={() => setActiveFilter(filter)}
-        >
-         <Text style={[styles.filterText, activeFilter === filter && styles.filterTextActive]}>{filter}</Text>
-        </TouchableOpacity>
-       ))}
-      </ScrollView>
-     </View>
+    <View style={styles.filterContainer}>
+     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
+      {filters.map((filter) => (
+       <TouchableOpacity
+        key={filter}
+        style={[styles.filterChip, activeFilter === filter && styles.filterChipActive]}
+        onPress={() => setActiveFilter(filter)}
+       >
+        <Text style={[styles.filterText, activeFilter === filter && styles.filterTextActive]}>{filter}</Text>
+       </TouchableOpacity>
+      ))}
+     </ScrollView>
+    </View>
 
-     {/* Calendar */}
-     <View style={styles.section}>
-         <TouchableOpacity style={styles.monthSelector} onPress={() => setDatePickerVisible(true)}>
-             <Text style={styles.monthText}>{currentMonthYear}</Text>
-             <Icon name="angle-down" size={18} color={TEXT_PRIMARY} />
-         </TouchableOpacity>
-         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.calendarDaysScroll}>
-             {dates.map((d) => (
-                  <TouchableOpacity
-                     key={d.date}
-                     style={[styles.dateChip, selectedDate === d.date && styles.dateChipActive]}
-                     onPress={() => setSelectedDate(d.date)}
-                  >
-                     <Text style={[styles.dateDayText, selectedDate === d.date && styles.dateTextActive]}>{d.day}</Text>
-                     <Text style={[styles.dateNumText, selectedDate === d.date && styles.dateTextActive]}>{d.date}</Text>
-                  </TouchableOpacity>
-             ))}
-         </ScrollView>
-     </View>
+    <View style={styles.section}>
+     <TouchableOpacity style={styles.monthSelector} onPress={() => setDatePickerVisible(true)}>
+      <Text style={styles.monthText}>{currentMonthYear}</Text>
+      <Icon name="angle-down" size={18} color={TEXT_PRIMARY} />
+     </TouchableOpacity>
+     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.calendarDaysScroll}>
+      {dates.map((d) => (
+       <TouchableOpacity
+        key={d.date}
+        style={[styles.dateChip, selectedDate === d.date && styles.dateChipActive]}
+        onPress={() => setSelectedDate(d.date)}
+       >
+        <Text style={[styles.dateDayText, selectedDate === d.date && styles.dateTextActive]}>{d.day}</Text>
+        <Text style={[styles.dateNumText, selectedDate === d.date && styles.dateTextActive]}>{d.date}</Text>
+       </TouchableOpacity>
+      ))}
+     </ScrollView>
+    </View>
 
-     {/* Ticket Results */}
-     <View style={styles.resultsContainer}>
-      <Text style={styles.resultsText}>{TICKET_DATA.length} Tickets Found</Text>
-      <FlatList
-       data={TICKET_DATA}
-       renderItem={({ item }) => <TicketCard item={item} />}
-       keyExtractor={(item) => item.id}
-       scrollEnabled={false}
-      />
-     </View>
+    <View style={styles.resultsContainer}>
+     <Text style={styles.resultsText}>{TICKET_DATA.length} Tickets Found</Text>
+     <FlatList
+      data={TICKET_DATA}
+      renderItem={({ item }) => <TicketCard item={item} />}
+      keyExtractor={(item) => item.id}
+      scrollEnabled={false}
+     />
+    </View>
    </ScrollView>
 
-   {/* === Navigasi Bawah === */}
    <View style={styles.bottomNav}>
-       {/* ... (Nav Bar content remains the same) ... */}
-         <Pressable style={styles.navButton} onPress={() => navigation.navigate('HomeTabs')}>
-           <Icon name="home" size={26} color={TEXT_SECONDARY} />
-         </Pressable>
-         <Pressable style={styles.navButton}>
-           <Icon name="ticket" size={26} color={ACCENT_COLOR} />
-         </Pressable>
-         <Pressable style={styles.navButton} onPress={() => {/* Navigasi ke Profile nanti */}}>
-           <Icon name="user" size={26} color={TEXT_SECONDARY} />
-         </Pressable>
+     <Pressable style={styles.navButton} onPress={() => navigation.navigate('HomeTabs')}>
+       <Icon name="home" size={26} color={TEXT_SECONDARY} />
+     </Pressable>
+     <Pressable style={styles.navButton}>
+       <Icon name="ticket" size={26} color={ACCENT_COLOR} />
+     </Pressable>
+     <Pressable style={styles.navButton} onPress={() => {/* Navigasi ke Profile nanti */}}>
+       <Icon name="user" size={26} color={TEXT_SECONDARY} />
+     </Pressable>
    </View>
 
-   {/* === Modal Date Picker === */}
    <Modal
     animationType="fade"
     transparent={true}
@@ -208,15 +190,13 @@ const TicketScreen = () => {
     <Pressable style={styles.modalOverlay} onPress={() => setDatePickerVisible(false)}>
      <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
       <Text style={styles.modalTitle}>Select Month & Year</Text>
-      {/* PERBAIKAN: Gunakan style dari StyleSheet */}
       <ScrollView style={styles.modalScroll}>
        {DATE_OPTIONS.map((dateOption, index) => (
         <TouchableOpacity
          key={dateOption}
-         // Terapkan style berbeda untuk item terakhir
          style={[
-            styles.modalOptionButton,
-            index === DATE_OPTIONS.length - 1 && styles.modalOptionButtonLast
+          styles.modalOptionButton,
+          index === DATE_OPTIONS.length - 1 && styles.modalOptionButtonLast
          ]}
          onPress={() => handleDateSelect(dateOption)}
         >
@@ -228,7 +208,6 @@ const TicketScreen = () => {
     </Pressable>
    </Modal>
 
-   {/* === Modal Location Picker === */}
    <Modal
     animationType="fade"
     transparent={true}
@@ -238,15 +217,13 @@ const TicketScreen = () => {
     <Pressable style={styles.modalOverlay} onPress={() => setLocationPickerVisible(false)}>
      <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
       <Text style={styles.modalTitle}>Select Location</Text>
-      {/* PERBAIKAN: Gunakan style dari StyleSheet */}
        <ScrollView style={styles.modalScroll}>
         {LOCATION_OPTIONS.map((locationOption, index) => (
          <TouchableOpacity
           key={locationOption}
-          // Terapkan style berbeda untuk item terakhir
           style={[
-            styles.modalOptionButton,
-            index === LOCATION_OPTIONS.length - 1 && styles.modalOptionButtonLast
+           styles.modalOptionButton,
+           index === LOCATION_OPTIONS.length - 1 && styles.modalOptionButtonLast
           ]}
           onPress={() => handleLocationSelect(locationOption)}
          >
@@ -318,7 +295,6 @@ const styles = StyleSheet.create({
 
  resultsContainer: { paddingHorizontal: 20, marginTop: 30 },
  resultsText: { fontSize: 16, fontWeight: 'bold', color: TEXT_PRIMARY, marginBottom: 15 },
- // --- Ticket Card Styles ---
  card: {
   backgroundColor: CARD_COLOR,
   borderRadius: 20,
@@ -364,7 +340,6 @@ const styles = StyleSheet.create({
  dateText: { fontSize: 12, color: TEXT_SECONDARY },
  priceText: { fontSize: 18, fontWeight: 'bold', color: TEXT_PRIMARY, marginTop: 5, alignSelf: 'flex-end'},
 
- // --- Modal Styles ---
  modalOverlay: {
     flex: 1,
     backgroundColor: MODAL_OVERLAY_BG,
@@ -391,7 +366,6 @@ const styles = StyleSheet.create({
     width: '100%',
     textAlign: 'center',
  },
- // PERBAIKAN: Style baru untuk ScrollView di modal
  modalScroll: {
     width: '100%',
  },
@@ -402,7 +376,7 @@ const styles = StyleSheet.create({
     borderBottomColor: BORDER_DARK,
    paddingHorizontal: 20,
  },
- modalOptionButtonLast: { // Style untuk item terakhir agar tidak ada border bawah
+ modalOptionButtonLast: {
     borderBottomWidth: 0,
  },
  modalOptionText: {
@@ -410,8 +384,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
  },
-
- // --- Navigasi Bawah Styles ---
  bottomNav: {
   position: 'absolute',
   bottom: 0,
