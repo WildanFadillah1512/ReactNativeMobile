@@ -1,9 +1,14 @@
-// File: App.tsx (FINAL - RootStackParamList Diperbaiki dengan ApiSeller)
+// File: App.tsx (FINAL - RootStackParamList & Navigation Types)
 
 import React from 'react';
 import { StatusBar } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+// --- PERBAIKAN 3: Import tipe navigasi untuk diekspor ---
+import { NavigationContainer, RouteProp } from '@react-navigation/native';
+import { 
+    createNativeStackNavigator, 
+    NativeStackNavigationProp 
+} from '@react-navigation/native-stack';
+// --- AKHIR PERBAIKAN 3 ---
 
 // 🧭 Import semua screen
 import HomeScreen from './src/screens/HomeScreen';
@@ -29,17 +34,15 @@ import { ReviewProvider } from './src/context/ReviewContext';
 import { LikeProvider } from './src/context/LikeContext';
 import { CartProvider } from './src/context/CartContext';
 
-// --- PERBAIKAN 1: IMPORT TIPE YANG BENAR ---
-// Impor ApiSeller (baru), Address, CheckoutRentalItem.
-// Hapus Seller (lama) dan RentalItem (lama).
-import type { Address, ApiSeller, CheckoutRentalItem } from './src/types'; // Pastikan path ke types.ts benar
+// --- PERBAIKAN 1: IMPORT TIPE YANG BENAR (Sudah Benar) ---
+import type { Address, ApiSeller, CheckoutRentalItem } from './src/types';
 // --- AKHIR PERBAIKAN 1 ---
 
 
-// --- PERBAIKAN 2: DEFINISI NAVIGASI UTAMA (RootStackParamList - FINAL) ---
+// --- PERBAIKAN 2: DEFINISI NAVIGASI UTAMA (RootStackParamList - FINAL) (Sudah Benar) ---
 export type RootStackParamList = {
     Home: {
-        activeTabId?: 'home' | 'explore' | 'profile'; // Tambahkan 'saved' jika perlu
+        activeTabId?: 'home' | 'explore' | 'profile' | 'saved'; // Sesuaikan tab
     } | undefined;
 
     // 'Detail' sekarang HANYA menerima 'productId' (angka).
@@ -47,7 +50,7 @@ export type RootStackParamList = {
         productId: number;
     };
 
-    // Produk & checkout (Menggunakan CheckoutRentalItem - Tipe terformat, sudah benar)
+    // Produk & checkout (Menggunakan CheckoutRentalItem - Tipe terformat)
     Checkout: {
         items: CheckoutRentalItem[];
         selectedAddressId?: number;
@@ -58,7 +61,7 @@ export type RootStackParamList = {
     };
     Success: undefined;
 
-    // Manajemen alamat (Menggunakan Address - Sudah benar)
+    // Manajemen alamat (Menggunakan Address)
     AddAddress: undefined;
     EditAddress: { address: Address };
 
@@ -67,31 +70,41 @@ export type RootStackParamList = {
         sellerId: number;
         sellerName: string;
         itemId?: number;
-        sellerAvatar?: string | null; // <-- FIX: Sesuaikan dengan ApiSeller (bisa null)
+        sellerAvatar?: string | null; // <-- FIX: Sesuai dengan ApiSeller (bisa null)
     };
 
     // 'SellerProfile' sekarang menerima 'ApiSeller' (tipe baru dari API).
     SellerProfile: { seller: ApiSeller }; // <-- FIX: Menggunakan ApiSeller
 
-    // Review, favorit, keranjang (Parameter sudah benar)
+    // Review, favorit, keranjang
     AllReviews: { itemId: number; productName: string };
     Saved: undefined;
     Cart: undefined;
 
-    // Pencarian (Parameter sudah benar)
+    // Pencarian
     SearchHistory: undefined;
     SearchResults: { query: string };
 
-    // Notifikasi (Parameter sudah benar)
+    // Notifikasi
     Notifications: undefined;
 };
 // --- AKHIR PERBAIKAN 2 ---
+
+
+// --- PERBAIKAN 3: EKSPOR TIPE NAVIGASI (Tambahan Profesional) ---
+// Tipe ini akan digunakan di semua screen untuk hook useNavigation/useRoute
+export type RootStackNavigationProp<T extends keyof RootStackParamList = 'Home'> = 
+  NativeStackNavigationProp<RootStackParamList, T>;
+  
+export type RootStackRouteProp<T extends keyof RootStackParamList> = 
+  RouteProp<RootStackParamList, T>;
+// --- AKHIR PERBAIKAN 3 ---
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
     return (
-        // Rantai Provider Anda sudah terstruktur dengan baik
+        // Rantai Provider
         <CartProvider>
             <LikeProvider>
                 <ChatProvider>
@@ -103,10 +116,10 @@ export default function App() {
                                     initialRouteName="Home"
                                     screenOptions={{
                                         headerShown: false,
-                                        animation: 'slide_from_right', // Atau 'fade'
+                                        animation: 'slide_from_right',
                                     }}
                                 >
-                                    {/* Definisi Stack Screen Anda sudah lengkap */}
+                                    {/* Definisi Stack Screen */}
                                     <Stack.Screen name="Home" component={HomeScreen} />
                                     <Stack.Screen name="SearchHistory" component={SearchHistoryScreen} />
                                     <Stack.Screen name="SearchResults" component={SearchResultsScreen} />

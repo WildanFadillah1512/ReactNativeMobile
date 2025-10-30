@@ -1,10 +1,10 @@
-// File: ./src/types.ts (FINAL - Disesuaikan dengan ApiProduct & ApiSeller)
+// File: ./src/types.ts (Final & Disesuaikan)
 
 import type { ImageSourcePropType } from 'react-native';
 
-// ==========================
-// 🚀 API Data Types (Single Source of Truth)
-// ==========================
+// =================================
+// 🚀 API DATA TYPES (Single Source of Truth)
+// =================================
 // Tipe ini mewakili data MURNI dari backend Anda.
 // Semua state utama (di Context, HomeScreen, DetailScreen) HARUS menggunakan ini.
 
@@ -20,7 +20,7 @@ export interface ApiSeller {
 export interface ApiProduct {
     id: number;
     name: string;
-    price: number; // <-- PENTING: number (angka murni)
+    price: number; // <-- PENTING: number (angka murni untuk kalkulasi)
     description: string;
     imageUrl: string | null; // <-- Nama file gambar (bisa null)
     category: string | null; // <-- Bisa null dari API
@@ -33,23 +33,12 @@ export interface ApiProduct {
 }
 
 
-// ==========================
-// 🧺 Cart Entry Definition (FIXED)
-// ==========================
-// Ini adalah struktur data yang disimpan di CartContext.
-// HARUS menggunakan ApiProduct agar kalkulasi harga benar.
-export interface CartEntry {
-    item: ApiProduct; // <-- FIX: Menggunakan ApiProduct, bukan RentalItem
-    selected: boolean;
-    duration: number;
-}
-
-
-// ==========================
-// ⭐ User Review Definition
-// ==========================
-// (Tidak diubah, diasumsikan sudah benar)
-export interface UserReview {
+// =================================
+// ⭐ REVIEW TYPE
+// =================================
+// Tipe untuk data ulasan
+// (Disesuaikan dari UserReview -> Review agar konsisten dengan import)
+export interface Review {
     id: number;
     itemId: number; // ID produk yang direview
     name: string;
@@ -60,9 +49,21 @@ export interface UserReview {
 }
 
 
-// ==========================
-// 📍 Address Definition
-// ==========================
+// =================================
+// 🧺 CART CONTEXT TYPE (FIXED)
+// =================================
+// Ini adalah struktur data yang disimpan di CartContext.
+// HARUS menggunakan ApiProduct agar kalkulasi harga benar.
+export interface CartEntry {
+    item: ApiProduct; // <-- FIX: Menggunakan ApiProduct
+    selected: boolean;
+    duration: number;
+}
+
+
+// =================================
+// 📍 ADDRESS TYPE
+// =================================
 // (Tidak diubah, diasumsikan sudah benar)
 export interface Address {
     id: number;
@@ -76,17 +77,17 @@ export interface Address {
 
 
 // =============================================
-//  legacy / Formatted UI Types
+// 📱 UI-FORMATTED TYPES (LEGACY / PROPS)
 // =============================================
 // Tipe-tipe di bawah ini adalah tipe "lama" atau tipe yang sudah
 // diformat KHUSUS untuk ditampilkan di UI tertentu (misal: CheckoutScreen).
 // Hindari penggunaan tipe ini untuk state utama atau kalkulasi.
 
-// Tipe 'Seller' lama tidak diperlukan lagi, gunakan ApiSeller.
-// export interface Seller { ... }
-
-// Tipe RentalItem lama (price: string, image: ImageSourcePropType)
-// Ini adalah tipe data TERFORMAT.
+/**
+ * Tipe data produk yang sudah diformat untuk UI.
+ * - `price` adalah string (misal: "Rp 50.000")
+ * - `image` adalah ImageSourcePropType (untuk <Image>)
+ */
 export interface RentalItem {
     id: number;
     name: string;
@@ -102,8 +103,11 @@ export interface RentalItem {
     seller: ApiSeller; // <-- Disesuaikan menggunakan ApiSeller
 }
 
-// Tipe CheckoutRentalItem (bergantung pada RentalItem)
-// Ini digunakan oleh CheckoutScreen.
+/**
+ * Tipe data yang dibutuhkan oleh CheckoutScreen.
+ * Mewarisi semua properti RentalItem yang sudah terformat
+ * dan menambahkan `duration`.
+ */
 export interface CheckoutRentalItem extends RentalItem {
     duration: number;
 }
