@@ -13,21 +13,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-
-import type { RootStackParamList } from '../../App';
+import type { RootStackParamList } from '../navigation/types';
 import { useAddresses } from '../context/AddressContext';
 import type { Address, CheckoutRentalItem } from '../types';
 import { parsePrice, formatCurrency } from '../utils/riceParse';
-
-const COLORS = {
-  background: '#0f172a',
-  card: '#1e293b',
-  textPrimary: 'white',
-  textSecondary: '#cbd5e1',
-  textMuted: '#94a3b8',
-  primary: '#06b6d4',
-  border: '#334155',
-};
+import { COLORS } from '../config/theme';
 
 type CheckoutScreenProps = NativeStackScreenProps<RootStackParamList, 'Checkout'>;
 

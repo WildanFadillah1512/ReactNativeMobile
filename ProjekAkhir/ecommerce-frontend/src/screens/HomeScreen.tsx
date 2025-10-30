@@ -10,45 +10,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useIsFocused, type RouteProp } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import { RootStackParamList } from '../../App';
-// --- PERBAIKAN 1: Hapus import 'RentalItem' ---
-// import type { RentalItem } from '../types';
+import { RootStackParamList } from '../navigation/types';
 import type { ApiProduct } from '../types'; // Impor tipe API yang benar
-// --- AKHIR PERBAIKAN 1 ---
 import { useLikes } from '../context/LikeContext';
 import { useCart } from '../context/CartContext'; // useCart sekarang menyediakan addToCart(ApiProduct)
+import { COLORS } from '../config/theme';
+import { API_URL } from '../config/api';
 
-// Path ke logo (Pastikan benar)
 const LogoImage = require('../assets/images/logo.png');
 
-// URL API (Pastikan benar)
-const API_URL = 'http://10.95.21.143:3000';
-
-// Tipe Lokal (Sudah Benar)
-// type ApiSeller = { ... }; // (Sudah diimpor dari ../types)
-// type ApiProduct = { ... }; // (Sudah diimpor dari ../types)
 type TabId = 'home' | 'explore' | 'saved' | 'profile';
 type HomeRouteProp = RouteProp<RootStackParamList, 'Home'>;
 type HomeScreenProps = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
-// Warna (Sudah Benar)
-const COLORS = {
-    background: '#0f172a',
-    card: '#1e293b',
-    textPrimary: 'white',
-    textSecondary: '#cbd5e1',
-    textMuted: '#94a3b8',
-    primary: '#06b6d4',
-    danger: '#ef4444',
-    border: '#334155',
-    starActive: '#facc15',
-    trending: '#f97316',
-    outdoor: '#14b8a6',
-    elektronik: '#6366f1',
-    perlengkapan: '#eab308',
-    kendaraan: '#ef4444',
-    defaultCategory: '#cbd5e1',
-};
 
 
 export default function HomeScreen({ navigation }: HomeScreenProps) {

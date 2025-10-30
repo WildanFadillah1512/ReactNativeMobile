@@ -13,27 +13,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-
-// --- IMPORTS INTI ---
-import type { RootStackParamList } from '../../App';
-
+import type { RootStackParamList } from '../navigation/types';
 import { useAddresses } from '../context/AddressContext';
-// --- AKHIR IMPORTS ---
+import { COLORS } from '../config/theme';
 
-// Palet warna global
-const COLORS = {
-  background: '#0f172a',
-  card: '#1e293b',
-  textPrimary: 'white',
-  textSecondary: '#cbd5e1',
-  textMuted: '#94a3b8',
-  primary: '#06b6d4',
-  cyan: '#22d3ee',
-  danger: '#ef4444',
-  border: '#334155',
-};
-
-// Props tipe layar
 type AddressScreenProps = NativeStackScreenProps<RootStackParamList, 'Address'>;
 
 export default function AddressScreen({ route, navigation }: AddressScreenProps) {

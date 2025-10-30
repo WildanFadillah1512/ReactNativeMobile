@@ -103,11 +103,7 @@ export interface RentalItem {
     seller: ApiSeller; // <-- Disesuaikan menggunakan ApiSeller
 }
 
-/**
- * Tipe data yang dibutuhkan oleh CheckoutScreen.
- * Mewarisi semua properti RentalItem yang sudah terformat
- * dan menambahkan `duration`.
- */
+
 export interface CheckoutRentalItem extends RentalItem {
     duration: number;
 }

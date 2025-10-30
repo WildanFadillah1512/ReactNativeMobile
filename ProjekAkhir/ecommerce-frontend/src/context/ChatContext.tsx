@@ -16,10 +16,6 @@ export interface Message {
     itemId?: number; // Opsional, untuk konteks barang jika ada
 }
 
-/**
- * 🗂️ Struktur penyimpanan seluruh chat, dikelompokkan berdasarkan sellerId
- * Contoh: { 101: [Message, Message], 102: [Message] }
- */
 interface AllChats {
     [sellerId: number]: Message[]; // Menggunakan sellerId sebagai key
 }

@@ -8,34 +8,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-
-import { RootStackParamList } from '../../App'; // Pastikan path benar
+import { RootStackParamList } from '../navigation/types'; // Pastikan path benar
 import { useCart } from '../context/CartContext'; // useCart sekarang menyediakan CartEntry[] dg ApiProduct
-
-// --- PERBAIKAN 1: Import Tipe yang Benar ---
-// Kita butuh 'ApiProduct' dan 'CartEntry' (yang berisi ApiProduct)
-// Hapus 'RentalItem' karena tidak dipakai langsung di sini
 import type { ApiProduct, CartEntry } from '../types';
-// --- AKHIR PERBAIKAN 1 ---
-
-// --- PERBAIKAN 2: Hapus 'parsePrice', kita hanya butuh 'formatCurrency' ---
 import { formatCurrency } from '../utils/riceParse'; // (Asumsi nama file: priceParse)
-// --- AKHIR PERBAIKAN 2 ---
+import { COLORS } from '../config/theme';
+import { API_URL } from '../config/api';
 
-// Tentukan URL API untuk gambar
-const API_URL = 'http://10.95.21.143:3000'; // Sesuaikan jika perlu
-
-// Warna (Sudah Benar)
-const COLORS = {
-    background: '#0f172a',
-    card: '#1e293b',
-    textPrimary: 'white',
-    textSecondary: '#cbd5e1',
-    textMuted: '#94a3b8',
-    primary: '#06b6d4', // Biru-Toska
-    danger: '#ef4444', // Merah
-    border: '#334155', // Abu-abu gelap untuk border/bg
-};
 
 // Komponen Checkbox Kustom (Sudah Benar)
 const CustomCheckbox: React.FC<{ value: boolean; onValueChange: () => void; }> = ({ value, onValueChange }) => (

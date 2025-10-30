@@ -14,25 +14,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../../App';
-
-// --- Define COLORS ---
-const COLORS = {
-    background: '#0f172a',
-    card: '#1e293b',
-    textPrimary: 'white',
-    textSecondary: '#cbd5e1',
-    textMuted: '#94a3b8',
-    primary: '#06b6d4',
-    border: '#334155',
-    success: '#10b981',
-    warning: '#f59e0b',
-    info: '#3b82f6',
-    danger: '#ef4444',
-    readOverlay: 'rgba(30, 41, 59, 0.3)',
-    unreadDot: '#22d3ee',
-    starActive: '#facc15',
-};
+import type { RootStackParamList } from '../navigation/types';
+import { COLORS } from '../config/theme';
 // --- End COLORS ---
 
 type NotificationType = 'order' | 'promo' | 'chat' | 'system' | 'rating';

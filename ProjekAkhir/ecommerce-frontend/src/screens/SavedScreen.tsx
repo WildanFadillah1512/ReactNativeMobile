@@ -16,16 +16,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import { RootStackParamList } from '../../App';
+import { RootStackParamList } from '../navigation/types';
 // --- PERBAIKAN 1: Hapus import 'RentalItem' ---
 // import type { RentalItem } from '../types';
 // Import tipe API yang benar
 import type { ApiProduct } from '../types'; // (Asumsi sudah ada di ../types)
 // --- AKHIR PERBAIKAN 1 ---
 import { useLikes } from '../context/LikeContext';
-
-// URL API (Pastikan benar)
-const API_URL = 'http://10.95.21.143:3000';
+import { API_URL } from '../config/api'; 
 
 // Tipe ApiSeller & ApiProduct (Sudah Benar, bisa dihapus jika diimpor dari ../types)
 // type ApiSeller = { ... };

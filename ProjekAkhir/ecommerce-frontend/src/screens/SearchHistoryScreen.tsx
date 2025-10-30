@@ -1,5 +1,3 @@
-// File: src/screens/SearchHistoryScreen.tsx (Kode Lengkap yang Diperbarui)
-
 import React, { useCallback, useEffect, useState } from 'react'; // --- BARU: useState
 import {
     View, Text, StyleSheet, ScrollView,
@@ -9,40 +7,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { type NativeStackScreenProps } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-import type { RootStackParamList } from '../../App';
-
-// --- DIHAPUS: Impor data produk statis ---
-// import { allRentalProducts } from '../data/product';
-// import type { RentalItem } from '../types'; // Tipe RentalItem tidak dibutuhkan lagi di sini
+import type { RootStackParamList } from '../navigation/types';
+import { COLORS } from '../config/theme';
+import { API_URL } from '../config/api';
 
 type SearchHistoryScreenProps = NativeStackScreenProps<RootStackParamList, 'SearchHistory'>;
-
-// Kunci AsyncStorage
 const SEARCH_HISTORY_KEY = '@search_history';
-// Batasan jumlah riwayat yang disimpan
 const HISTORY_LIMIT = 5;
 
-// --- Define COLORS (Tidak Berubah) ---
-const COLORS = {
-    background: '#0f172a',
-    card: '#1e293b',
-    textPrimary: 'white',
-    textSecondary: '#cbd5e1',
-    textMuted: '#94a3b8',
-    primary: '#06b6d4',
-    border: '#334155',
-    danger: '#ef4444',
-};
-// --- End COLORS ---
-
-// =======================================================
-// --- BARU: TENTUKAN URL API ANDA ---
-const API_URL = 'http://10.95.21.143:3000'; // (Android Emulator)
-// const API_URL = 'http://localhost:3000'; // (iOS Simulator)
-// =======================================================
-
-// --- BARU: Tipe Data dari API (Hanya butuh nama) ---
 type ApiTrendingProduct = {
   id: number;
   name: string;

@@ -16,33 +16,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../App';
-// --- PERBAIKAN 1: Impor tipe terpusat ---
+import { RootStackParamList } from '../navigation/types';
 import type { ApiProduct } from '../types';
-// --- AKHIR PERBAIKAN 1 ---
+import { COLORS } from '../config/theme';
+import { API_URL } from '../config/api';
 
-
-// =======================================================
-// 🚀 KONSTANTA
-// =======================================================
-const API_URL = 'http://10.95.21.143:3000';
-
-// --- PERBAIKAN 2: Pindahkan COLORS ke atas ---
-const COLORS = {
-    background: '#0f172a',
-    card: '#1e293b',
-    textPrimary: 'white',
-    textSecondary: '#cbd5e1',
-    textMuted: '#94a3b8',
-    border: '#e2e8f0', // Border terang dari style Anda
-    primary: '#06b6d4',
-    cyan: '#22d3ee',
-};
-// --- AKHIR PERBAIKAN 2 ---
-
-
-// --- PERBAIKAN 3: Tambahkan Helper buildImageUri ---
-// (Helper ini idealnya ada di file utils terpisah)
 const buildImageUri = (filename?: string | null): string | null => {
     if (!filename) return null;
     // Jika sudah URL lengkap, kembalikan

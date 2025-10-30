@@ -13,9 +13,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import { RootStackParamList } from '../../App';
+import { RootStackParamList } from '../navigation/types';
 import { useReviews} from '../context/ReviewContext';
-import type { UserReview } from '../types'; // Import UserReview juga
+import type { Review } from '../types'; // Import UserReview juga
 
 // StarRating Component (Copy dari DetailScreen atau impor jika dipisah)
 const StarRating = ({ rating }: { rating: number }) => (
@@ -39,7 +39,7 @@ export default function AllReviewsScreen({ route, navigation }: AllReviewsScreen
   const { getReviewsForItem, loading } = useReviews();
   const allItemReviews = getReviewsForItem(itemId); // Ambil semua ulasan
 
-  const renderReviewItem = ({ item }: { item: UserReview }) => (
+  const renderReviewItem = ({ item }: { item: Review }) => (
     <View style={styles.reviewCard}>
       <View style={styles.reviewHeader}>
         <Image source={{ uri: item.avatar }} style={styles.reviewAvatar} />

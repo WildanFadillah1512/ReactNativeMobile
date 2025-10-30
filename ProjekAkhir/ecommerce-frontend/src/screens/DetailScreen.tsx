@@ -10,31 +10,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { useRoute, useNavigation, type RouteProp } from '@react-navigation/native';
 // Pastikan tipe navigasi ini ada di file App.ts atau types.ts Anda
-import { RootStackParamList, RootStackNavigationProp } from '../../App'; 
+import { RootStackParamList, RootStackNavigationProp } from '../navigation/types'; 
 import { useReviews } from '../context/ReviewContext';
 import { useLikes } from '../context/LikeContext';
 import { useCart } from '../context/CartContext';
 import { formatCurrency } from '../utils/riceParse';
 import type { CheckoutRentalItem, ApiProduct, ApiSeller, Review } from '../types';
+import { COLORS } from '../config/theme';
+import { API_URL } from '../config/api';
 
-// --- CONSTANTS ---
-const API_URL = 'http://10.95.21.143:3000';
 const MIN_DURATION = 1;
 const MAX_DURATION = 30;
 
-// Warna & konstanta (Dari kode Anda)
-const COLORS = {
-    background: '#0f172a',
-    card: '#1e293b',
-    textPrimary: 'white',
-    textSecondary: '#cbd5e1',
-    textMuted: '#94a3b8',
-    primary: '#06b6d4',
-    starActive: '#facc15',
-    starInactive: '#475569',
-    danger: '#ef4444',
-    border: '#334155',
-};
 
 // --- TYPES ---
 type DetailRouteProp = RouteProp<RootStackParamList, 'Detail'>;

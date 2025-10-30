@@ -1,5 +1,3 @@
-// File: src/screens/SearchResultsScreen.tsx (Refactored with Search Bar)
-
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import {
     View, Text, StyleSheet, ScrollView,
@@ -10,28 +8,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome';
-
 import { useRoute, type RouteProp, useNavigation } from '@react-navigation/native';
-import type { RootStackParamList, RootStackNavigationProp } from '../../App';
+import type { RootStackParamList, RootStackNavigationProp } from '../navigation/types';
 import type { ApiProduct, ApiSeller } from '../types';
+import { COLORS } from '../config/theme';
+import { API_URL } from '../config/api';
 
-
-// =======================================================
-// 🚀 KONSTANTA
-// =======================================================
-const API_URL = 'http://10.95.21.143:3000';
-
-const COLORS = {
-    background: '#0f172a',
-    card: '#1e293b',
-    textPrimary: 'white',
-    textSecondary: '#cbd5e1',
-    textMuted: '#94a3b8',
-    primary: '#06b6d4',
-    border: '#334155',
-    starActive: '#facc15',
-    backdrop: 'rgba(0, 0, 0, 0.6)',
-};
 
 const SORT_OPTIONS: { id: SortOptionId; label: string }[] = [
     { id: 'relevan', label: 'Paling Relevan' },
@@ -41,10 +23,6 @@ const SORT_OPTIONS: { id: SortOptionId; label: string }[] = [
 ];
 
 const RATING_OPTIONS = [4, 3, 2, 1];
-
-// =======================================================
-// 🛠️ FUNGSI HELPER
-// =======================================================
 const buildImageUri = (filename?: string | null): string | null => {
     if (!filename) return null;
     if (filename.startsWith('http://') || filename.startsWith('https://')) {

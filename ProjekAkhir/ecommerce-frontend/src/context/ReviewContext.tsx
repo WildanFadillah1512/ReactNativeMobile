@@ -3,17 +3,17 @@ import React, { createContext, useState, useEffect, useContext, ReactNode } from
 import AsyncStorage from '@react-native-async-storage/async-storage';
 // 1. Import data ulasan awal DAN tipe UserReview
 import { initialProductReviews } from '../data/reviews';
-import type { UserReview } from '../types'; // Atau import dari '../data/reviews' jika tipe ada di sana
+import type { Review } from '../types'; // Atau import dari '../data/reviews' jika tipe ada di sana
 
 // Tipe AllReviews (Tetap Sama)
 interface AllReviews {
-  [itemId: number]: UserReview[];
+  [itemId: number]: Review[];
 }
 
 // Tipe Context (Tetap Sama)
 interface ReviewContextType {
   loading: boolean;
-  getReviewsForItem: (itemId: number) => UserReview[];
+  getReviewsForItem: (itemId: number) => Review[];
   addReviewForItem: (itemId: number, rating: number, comment: string) => Promise<void>;
 }
 
@@ -47,7 +47,7 @@ export const ReviewProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           if (!isNaN(itemId) && Array.isArray(storedReviews[itemId])) {
             // Ambil ulasan unik (berdasarkan ID ulasan) dari gabungan storage dan initial
             const combined = [...storedReviews[itemId], ...(initialProductReviews[itemId] || [])];
-            const uniqueReviewsMap = new Map<number, UserReview>();
+            const uniqueReviewsMap = new Map<number, Review>();
             combined.forEach(review => {
               if (review && typeof review.id === 'number') { // Pastikan review valid
                  uniqueReviewsMap.set(review.id, review);
@@ -70,13 +70,13 @@ export const ReviewProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   }, []);
 
   // Fungsi getReviewsForItem (Tetap Sama)
-  const getReviewsForItem = (itemId: number): UserReview[] => {
+  const getReviewsForItem = (itemId: number): Review[] => {
     return (reviews[itemId] || []).sort((a, b) => b.timestamp - a.timestamp);
   };
 
   // Fungsi addReviewForItem (Update nama & avatar)
   const addReviewForItem = async (itemId: number, rating: number, comment: string) => {
-    const newReview: UserReview = {
+    const newReview: Review = {
       id: Date.now(),
       itemId: itemId,
       // --- FIX: Gunakan nama pengguna yang ditentukan ---
