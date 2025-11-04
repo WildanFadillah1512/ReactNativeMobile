@@ -1,5 +1,3 @@
-// File: src/screens/NotificationScreen.tsx
-
 import React, { useState, useMemo, useCallback } from 'react';
 import {
     View,
@@ -13,11 +11,17 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome';
+
+// --- 1. IMPOR TIPE BARU UNTUK PROPS ---
+import type { CompositeScreenProps } from '@react-navigation/native';
+import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../navigation/types';
+import { type RootStackParamList, type MainTabParamList } from '../navigation/types';
+
 import { COLORS } from '../config/theme';
 // --- End COLORS ---
 
+// Definisi tipe (Biarkan, sudah benar)
 type NotificationType = 'order' | 'promo' | 'chat' | 'system' | 'rating';
 interface NotificationItem {
     id: string;
@@ -29,15 +33,17 @@ interface NotificationItem {
     relatedId?: number | string;
 }
 
+// Data Dummy (Biarkan, sudah benar)
 const dummyNotifications: NotificationItem[] = [
     { id: '1', type: 'order', title: 'Pesanan #INV123 Dikirim', message: 'Estimasi tiba besok. Lacak pengiriman Anda.', timestamp: Date.now() - 2 * 60 * 60 * 1000, read: false, relatedId: 123 },
     { id: '2', type: 'promo', title: 'Promo Akhir Pekan!', message: 'Diskon hingga 50% untuk kategori Outdoor.', timestamp: Date.now() - 5 * 60 * 60 * 1000, read: false },
-    { id: '3', type: 'chat', title: 'Pesan Baru dari SewaKameraPro', message: 'Halo kak, barangnya ready...', timestamp: Date.now() - 25 * 60 * 60 * 1000, read: false, relatedId: 'chat-102' },
+    { id: '3', type: 'chat', title: 'Pesan Baru dari SewaKameraPro', message: 'Halo kak, barangnya ready...', timestamp: Date.now() - 25 * 60 * 60 * 1000, read: false, relatedId: 102 }, // Ubah ke number
     { id: '4', type: 'system', title: 'Update Kebijakan Privasi', message: 'Kami telah memperbarui kebijakan privasi kami.', timestamp: Date.now() - 28 * 60 * 60 * 1000, read: true },
     { id: '5', type: 'order', title: 'Pesanan #INV11 Selesai', message: 'Jangan lupa berikan rating untuk penyewa.', timestamp: Date.now() - 3 * 24 * 60 * 60 * 1000, read: true, relatedId: 11 },
     { id: '6', type: 'rating', title: 'Rating Diterima', message: 'Anda menerima rating 5 bintang dari penyewa Sepeda Gunung.', timestamp: Date.now() - 5 * 24 * 60 * 60 * 1000, read: true, relatedId: 1 },
 ];
 
+// Helper Functions (Biarkan, sudah benar)
 const getNotificationIcon = (type: NotificationType): { name: string; color: string } => {
     switch (type) {
         case 'order': return { name: 'cube', color: COLORS.success };
@@ -87,6 +93,7 @@ const groupNotificationsByDate = (notifications: NotificationItem[]): GroupedNot
     return sections;
 };
 
+// Komponen NotificationCard (Biarkan, sudah benar)
 interface NotificationCardProps { item: NotificationItem; onPress: (item: NotificationItem) => void; }
 const NotificationCard: React.FC<NotificationCardProps> = React.memo(({ item, onPress }) => {
     const iconInfo = getNotificationIcon(item.type);
@@ -116,8 +123,11 @@ const NotificationCard: React.FC<NotificationCardProps> = React.memo(({ item, on
 
 const renderSeparator = () => <View style={styles.separator} />;
 
-type TabId = 'home' | 'explore' | 'saved' | 'profile';
-type NotificationScreenProps = NativeStackScreenProps<RootStackParamList, 'Notifications'>;
+// --- TIPE PROPS ---
+type NotificationScreenProps = CompositeScreenProps<
+  BottomTabScreenProps<MainTabParamList, 'Notifications'>, // Tipe untuk Tab
+  NativeStackScreenProps<RootStackParamList>      // Tipe untuk Stack
+>;
 
 export default function NotificationScreen({ navigation }: NotificationScreenProps) {
     const [notifications, setNotifications] = useState<NotificationItem[]>(dummyNotifications);
@@ -140,14 +150,43 @@ export default function NotificationScreen({ navigation }: NotificationScreenPro
         if (!item.read) {
             setNotifications(prev => prev.map(n => n.id === item.id ? { ...n, read: true } : n));
         }
+        
+        // --- PERBAIKAN: Hapus komentar untuk menggunakan 'navigation' ---
         switch (item.type) {
-            case 'order': Alert.alert('Navigasi (Order)', `ID: ${item.relatedId}`); break;
-            case 'chat': Alert.alert('Navigasi (Chat)', `ID: ${item.relatedId}`); break;
-            case 'promo': Alert.alert('Navigasi (Promo)', `Membuka promo`); break;
-            case 'rating': Alert.alert('Navigasi (Rating)', `Produk ID: ${item.relatedId}`); break;
+            case 'order': 
+                // Ganti dengan navigasi order Anda
+                // navigation.navigate('OrderDetail', { orderId: item.relatedId }); 
+                Alert.alert('Navigasi (Order)', `ID: ${item.relatedId}`); 
+                break;
+            case 'chat': 
+                // Pastikan 'relatedId' sesuai dengan tipe 'Chat'
+                // Tipe Anda mengharapkan sellerId, sellerName, dll.
+                // Anda mungkin perlu mengambil info chat dulu
+                // Untuk sekarang, kita navigasi dengan data dummy:
+                if (typeof item.relatedId === 'number' || typeof item.relatedId === 'string') {
+                     // Asumsi relatedId 102 adalah sellerId
+                     navigation.navigate('Chat', { 
+                        sellerId: Number(item.relatedId) || 999, 
+                        sellerName: item.title.replace('Pesan Baru dari ', '') 
+                    });
+                } else {
+                    Alert.alert('Navigasi (Chat)', `ID: ${item.relatedId}`); 
+                }
+                break;
+            case 'promo': 
+                Alert.alert('Navigasi (Promo)', `Membuka promo`); 
+                break;
+            case 'rating': 
+                // Pastikan relatedId adalah number
+                if (typeof item.relatedId === 'number') {
+                    navigation.navigate('Detail', { productId: item.relatedId });
+                } else {
+                    Alert.alert('Navigasi (Rating)', `Produk ID: ${item.relatedId}`); 
+                }
+                break;
             default: break;
         }
-    }, []);
+    }, [navigation]); // <-- 'navigation' sekarang digunakan, jadi tambahkan ke dependensi
 
     const handleMarkAllRead = useCallback(() => {
         Alert.alert("Konfirmasi", "Tandai semua notifikasi sebagai sudah dibaca?",
@@ -164,21 +203,14 @@ export default function NotificationScreen({ navigation }: NotificationScreenPro
 
     const hasUnread = useMemo(() => notifications.some(n => !n.read), [notifications]);
 
-    const bottomNavItems = [
-        { icon: 'cube', id: 'home' as TabId },
-        { icon: 'compass', id: 'explore' as TabId },
-        { icon: 'bell-o', id: 'saved' as TabId },
-        { icon: 'user', id: 'profile' as TabId },
-    ];
-
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
+        <SafeAreaView style={styles.container} edges={['top']}> 
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity style={styles.headerButtonPlaceholder} onPress={() => navigation.goBack()}>
-                    <Icon name="arrow-left" size={20} color={COLORS.textPrimary} />
-                </TouchableOpacity>
+                <View style={styles.headerButtonPlaceholder} />
+                
                 <Text style={styles.headerTitle}>Notifikasi</Text>
+                
                 {hasUnread ? (
                     <TouchableOpacity style={styles.markAllReadButton} onPress={handleMarkAllRead}>
                         <Text style={styles.markAllReadText}>Baca Semua</Text>
@@ -209,35 +241,6 @@ export default function NotificationScreen({ navigation }: NotificationScreenPro
                     />
                 )}
             </View>
-
-            {/* Bottom Navigation */}
-            <View style={styles.bottomNav}>
-                {bottomNavItems.map(navItem => (
-                    <TouchableOpacity
-                        key={navItem.id}
-                        onPress={() => {
-                            if (navItem.id === 'home') {
-                                navigation.navigate('Home');
-                            } else if (navItem.id === 'explore') {
-                                // Tidak melakukan apa-apa
-                            } else if (navItem.id === 'saved') {
-                                // Already here
-                            } else if (navItem.id === 'profile') {
-                                // Tidak melakukan apa-apa untuk sekarang
-                            }
-                        }}
-                        style={styles.navItem}
-                    >
-                        <Icon
-                            name={navItem.icon}
-                            color={navItem.id === 'saved' ? COLORS.primary : COLORS.textMuted}
-                            size={22}
-                        />
-                    </TouchableOpacity>
-                ))}
-            </View>
-
-            <SafeAreaView edges={['bottom']} style={styles.bottomSpacer} />
         </SafeAreaView>
     );
 }
@@ -249,7 +252,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderColor: COLORS.border,
     },
     headerTitle: { fontSize: 18, fontWeight: '600', color: COLORS.textPrimary, textAlign: 'center' },
-    headerButtonPlaceholder: { width: 80, alignItems: 'flex-start' },
+    headerButtonPlaceholder: { width: 80, alignItems: 'flex-start' }, 
     markAllReadButton: { paddingVertical: 4, paddingHorizontal: 8, borderRadius: 6, width: 80, alignItems: 'flex-end' },
     markAllReadText: { color: COLORS.primary, fontSize: 13, fontWeight: '500' },
     listContainerWrapper: { flex: 1 },
@@ -263,8 +266,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row', paddingVertical: 12, paddingHorizontal: 16,
         backgroundColor: COLORS.card, alignItems: 'center', position: 'relative',
     },
-    unreadCard: { borderLeftWidth: 3, borderLeftColor: COLORS.primary }, // ✅ Tambahan
-    loadingIndicator: { marginTop: 30 }, // ✅ Tambahan
+    unreadCard: { borderLeftWidth: 3, borderLeftColor: COLORS.primary }, 
+    loadingIndicator: { marginTop: 30 }, 
     unreadDot: { position: 'absolute', top: 12, left: 6, width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.unreadDot, zIndex: 1 },
     iconContainer: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
     textContainer: { flex: 1 },
@@ -276,10 +279,4 @@ const styles = StyleSheet.create({
     readOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: COLORS.readOverlay },
     emptyContainer: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 40, minHeight: 300 },
     emptyText: { color: COLORS.textMuted, fontSize: 16, textAlign: 'center', marginTop: 16, lineHeight: 22 },
-    bottomNav: {
-        flexDirection: 'row', justifyContent: 'space-around', borderTopWidth: 1,
-        borderColor: COLORS.card, paddingTop: 10, backgroundColor: COLORS.background,
-    },
-    navItem: { alignItems: 'center', flex: 1, paddingBottom: 5 },
-    bottomSpacer: { backgroundColor: COLORS.background },
 });

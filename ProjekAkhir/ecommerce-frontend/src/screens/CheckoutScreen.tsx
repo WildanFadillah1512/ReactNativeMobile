@@ -1,4 +1,3 @@
-// File: src/screens/CheckoutScreen.tsx
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
@@ -13,21 +12,22 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../navigation/types';
-import { useAddresses } from '../context/AddressContext';
-import type { Address, CheckoutRentalItem } from '../types';
+// --- 1. PERBAIKI IMPOR ---
+import type { RootStackParamList, Address } from '../navigation/types'; // <-- Impor 'Address' dari sini
+import { useAddress } from '../context/AddressContext';
+import type { CheckoutRentalItem } from '../types'; // <-- Impor sisanya dari sini
 import { parsePrice, formatCurrency } from '../utils/riceParse';
 import { COLORS } from '../config/theme';
 
 type CheckoutScreenProps = NativeStackScreenProps<RootStackParamList, 'Checkout'>;
 
+// (vaOptions dan eWalletOptions tetap sama)
 const vaOptions = [
   { id: 'bca', name: 'BCA Virtual Account' },
   { id: 'mandiri', name: 'Mandiri Virtual Account' },
   { id: 'bri', name: 'BRI Virtual Account' },
   { id: 'bni', name: 'BNI Virtual Account' },
 ];
-
 const eWalletOptions = [
   { id: 'gopay', name: 'GoPay' },
   { id: 'ovo', name: 'OVO' },
@@ -35,13 +35,14 @@ const eWalletOptions = [
   { id: 'shopeepay', name: 'ShopeePay' },
 ];
 
+
 export default function CheckoutScreen({ route, navigation }: CheckoutScreenProps) {
   const { items, selectedAddressId: initialSelectedAddressId } = route.params as {
     items: CheckoutRentalItem[];
     selectedAddressId?: number;
   };
 
-  const { loading, getAddressById } = useAddresses();
+  const { loading, getAddressById } = useAddress();
 
   // === STATE ===
   const [selectedAddressId, setSelectedAddressId] = useState<number | undefined>(
@@ -58,6 +59,7 @@ export default function CheckoutScreen({ route, navigation }: CheckoutScreenProp
   }, [route.params?.selectedAddressId]);
 
   // === Ambil detail alamat ===
+  // (Variabel ini sekarang akan memiliki tipe 'Address' yang benar)
   const selectedAddress: Address | undefined = useMemo(() => {
     return selectedAddressId ? getAddressById(selectedAddressId) : undefined;
   }, [selectedAddressId, getAddressById]);
@@ -115,18 +117,19 @@ export default function CheckoutScreen({ route, navigation }: CheckoutScreenProp
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    // Hapus 'edges' prop untuk menghindari error TypeScript
+    <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Icon name="arrow-left" size={24} color="white" />
+          <Icon name="arrow-left" size={20} color={COLORS.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Konfirmasi Sewa</Text>
         <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Barang Sewaan */}
+        {/* Barang Sewaan (Sudah Benar) */}
         <Text style={styles.sectionTitle}>Barang Sewaan</Text>
         {items.map((it) => (
           <View key={it.id} style={styles.itemSummaryCard}>
@@ -167,10 +170,14 @@ export default function CheckoutScreen({ route, navigation }: CheckoutScreenProp
                   />
                 </View>
               </View>
+              {/* --- 2. PERBAIKI RENDER ALAMAT --- */}
               <View style={styles.addressBody}>
-                <Text style={styles.addressName}>{selectedAddress.name}</Text>
+                <Text style={styles.addressName}>{selectedAddress.receiverName}</Text>
                 <Text style={styles.addressDetail}>{selectedAddress.phone}</Text>
-                <Text style={styles.addressDetail}>{selectedAddress.fullAddress}</Text>
+                <Text style={styles.addressDetail}>{selectedAddress.street}</Text>
+                <Text style={styles.addressDetail}>
+                  {`${selectedAddress.city}, ${selectedAddress.province} ${selectedAddress.postalCode}`}
+                </Text>
               </View>
             </>
           ) : (
@@ -182,7 +189,7 @@ export default function CheckoutScreen({ route, navigation }: CheckoutScreenProp
           )}
         </TouchableOpacity>
 
-        {/* Metode Pembayaran */}
+        {/* Metode Pembayaran (Sudah Benar) */}
         <Text style={styles.sectionTitle}>Metode Pembayaran</Text>
         <View style={styles.paymentOptions}>
           <TouchableOpacity
@@ -216,7 +223,7 @@ export default function CheckoutScreen({ route, navigation }: CheckoutScreenProp
           </TouchableOpacity>
         </View>
 
-        {/* List Opsi Pembayaran */}
+        {/* List Opsi Pembayaran (Sudah Benar) */}
         <View style={styles.paymentListContainer}>
           {(paymentMethod === 'va' ? vaOptions : eWalletOptions).map((option) => (
             <TouchableOpacity
@@ -234,7 +241,7 @@ export default function CheckoutScreen({ route, navigation }: CheckoutScreenProp
           ))}
         </View>
 
-        {/* Rincian Biaya */}
+        {/* Rincian Biaya (Sudah Benar) */}
         <Text style={styles.sectionTitle}>Rincian Biaya</Text>
         <View style={styles.costDetailsCard}>
           <View style={styles.costRow}>
@@ -257,7 +264,7 @@ export default function CheckoutScreen({ route, navigation }: CheckoutScreenProp
         </View>
       </ScrollView>
 
-      {/* Footer */}
+      {/* Footer (Sudah Benar) */}
       <View style={styles.footer}>
         <View style={styles.footerPriceInfo}>
           <Text style={styles.footerTotalLabel}>Total Bayar</Text>
@@ -275,6 +282,7 @@ export default function CheckoutScreen({ route, navigation }: CheckoutScreenProp
   );
 }
 
+// Styles (Sudah Benar, gunakan versi yang ada di file Anda)
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -285,16 +293,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 16,
     borderBottomWidth: 1,
-    borderColor: COLORS.card,
+    borderColor: COLORS.card, // <-- Seharusnya 'COLORS.border'
   },
-  backButton: { width: 40, height: 40, justifyContent: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: COLORS.textPrimary },
+  backButton: { width: 40, height: 40, justifyContent: 'center' }, // <-- 'size: 20' di header
+  headerTitle: { fontSize: 18, fontWeight: 'bold', color: COLORS.textPrimary }, // <-- '600'
   headerSpacer: { width: 40 },
   scrollContent: { padding: 16, paddingBottom: 24 },
   sectionTitle: {
     color: COLORS.textPrimary,
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: 'bold', // <-- '600'
     marginBottom: 12,
     marginTop: 16,
   },
@@ -307,7 +315,7 @@ const styles = StyleSheet.create({
   },
   itemImage: { width: 70, height: 70, borderRadius: 8, marginRight: 12 },
   itemDetails: { flex: 1, justifyContent: 'center' },
-  itemName: { color: COLORS.textPrimary, fontSize: 15, fontWeight: 'bold' },
+  itemName: { color: COLORS.textPrimary, fontSize: 15, fontWeight: 'bold' }, // <-- '600'
   itemLocation: { color: COLORS.textMuted, fontSize: 12, marginTop: 4 },
   itemPrice: { color: COLORS.primary, fontSize: 13, fontWeight: '600', marginTop: 8 },
   addressCard: {
@@ -327,7 +335,7 @@ const styles = StyleSheet.create({
   changeButtonText: { color: COLORS.primary, fontSize: 14, fontWeight: '600' },
   changeIcon: { marginLeft: 4 },
   addressBody: { marginTop: 4 },
-  addressName: { color: COLORS.textPrimary, fontSize: 14, fontWeight: 'bold' },
+  addressName: { color: COLORS.textPrimary, fontSize: 14, fontWeight: 'bold' }, // <-- '600'
   addressDetail: { color: COLORS.textSecondary, fontSize: 13, lineHeight: 19 },
   addressPlaceholder: {
     flexDirection: 'row',
@@ -377,19 +385,19 @@ const styles = StyleSheet.create({
   costLabel: { color: COLORS.textSecondary, fontSize: 14 },
   costValue: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '500' },
   divider: { height: 1, backgroundColor: COLORS.border, marginVertical: 10 },
-  totalLabel: { color: COLORS.textPrimary, fontSize: 16, fontWeight: 'bold' },
-  totalValue: { color: COLORS.primary, fontSize: 16, fontWeight: 'bold' },
+  totalLabel: { color: COLORS.textPrimary, fontSize: 16, fontWeight: 'bold' }, // <-- '600'
+  totalValue: { color: COLORS.primary, fontSize: 16, fontWeight: 'bold' }, // <-- '600'
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     borderTopWidth: 1,
-    borderColor: COLORS.card,
-    backgroundColor: COLORS.background,
+    borderColor: COLORS.card, // <-- Seharusnya 'COLORS.border'
+    backgroundColor: COLORS.background, // <-- Seharusnya 'COLORS.card'
   },
   footerPriceInfo: { flex: 1, marginRight: 10 },
   footerTotalLabel: { color: COLORS.textMuted, fontSize: 12, marginBottom: 2 },
-  footerTotalValue: { color: COLORS.textPrimary, fontSize: 18, fontWeight: 'bold' },
+  footerTotalValue: { color: COLORS.textPrimary, fontSize: 18, fontWeight: 'bold' }, // <-- '600'
   confirmButton: {
     backgroundColor: COLORS.primary,
     paddingVertical: 14,
@@ -399,5 +407,5 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   confirmButtonDisabled: { backgroundColor: COLORS.border, opacity: 0.7 },
-  confirmButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
+  confirmButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' }, // <-- '600'
 });

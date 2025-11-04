@@ -1,11 +1,6 @@
-// src/data/reviews.ts
-import type { UserReview } from '../types'; // Gunakan ini jika tipe sudah dipindah ke src/types.ts
+import type { Review } from '../types'; 
 const randomTimestamp = () => Date.now() - Math.floor(Math.random() * 30 * 24 * 60 * 60 * 1000);
-
-// Data ulasan awal, dikelompokkan per itemId
-export const initialProductReviews: { [itemId: number]: UserReview[] } = {
-  // --- Gunung-Jaya Bikes (ID 101) ---
-  // Sepeda Gunung XC (itemId: 1)
+export const initialProductReviews: { [itemId: number]: Review[] } = {
   1: [
     { id: 101, itemId: 1, name: 'Budi S.', avatar: 'https://i.pravatar.cc/150?u=budi', rating: 5, comment: 'Sepedanya mantap, kuat di tanjakan!', timestamp: randomTimestamp() },
     { id: 102, itemId: 1, name: 'Citra L.', avatar: 'https://i.pravatar.cc/150?u=citra', rating: 4, comment: 'Agak berat sedikit, tapi overall oke.', timestamp: randomTimestamp() },
@@ -18,7 +13,6 @@ export const initialProductReviews: { [itemId: number]: UserReview[] } = {
     { id: 109, itemId: 1, name: 'Indah P.', avatar: 'https://i.pravatar.cc/150?u=indah', rating: 5, comment: 'Mantap buat main di JPG Bike Park!', timestamp: randomTimestamp() },
     { id: 110, itemId: 1, name: 'Joko S.', avatar: 'https://i.pravatar.cc/150?u=joko', rating: 4, comment: 'Admin ramah dan responsif.', timestamp: randomTimestamp() },
   ],
-  // Helm Sepeda XC (itemId: 5)
   5: [
     { id: 501, itemId: 5, name: 'Budi S.', avatar: 'https://i.pravatar.cc/150?u=budi', rating: 5, comment: 'Helmnya ringan dan nyaman.', timestamp: randomTimestamp() },
     { id: 502, itemId: 5, name: 'Lia A.', avatar: 'https://i.pravatar.cc/150?u=lia', rating: 4, comment: 'Pas di kepala, ventilasi bagus.', timestamp: randomTimestamp() },
@@ -31,7 +25,6 @@ export const initialProductReviews: { [itemId: number]: UserReview[] } = {
     { id: 509, itemId: 5, name: 'Sinta M.', avatar: 'https://i.pravatar.cc/150?u=sinta', rating: 4, comment: 'Bersih dan terawat.', timestamp: randomTimestamp() },
     { id: 510, itemId: 5, name: 'Tono G.', avatar: 'https://i.pravatar.cc/150?u=tono', rating: 5, comment: 'Mantap!', timestamp: randomTimestamp() },
   ],
-  // Sepeda Lipat Urban (itemId: 1011)
   1011: [
     { id: 1101, itemId: 1011, name: 'Ujang R.', avatar: 'https://i.pravatar.cc/150?u=ujang', rating: 5, comment: 'Praktis buat keliling komplek.', timestamp: randomTimestamp() },
     { id: 1102, itemId: 1011, name: 'Vina S.', avatar: 'https://i.pravatar.cc/150?u=vina', rating: 4, comment: 'Lipatannya mudah, ringan dibawa.', timestamp: randomTimestamp() },
@@ -44,7 +37,6 @@ export const initialProductReviews: { [itemId: number]: UserReview[] } = {
     { id: 1109, itemId: 1011, name: 'Chandra M.', avatar: 'https://i.pravatar.cc/150?u=chandra', rating: 4, comment: 'Lumayan buat coba-coba sepeda lipat.', timestamp: randomTimestamp() },
     { id: 1110, itemId: 1011, name: 'Dina R.', avatar: 'https://i.pravatar.cc/150?u=dina', rating: 5, comment: 'Good service!', timestamp: randomTimestamp() },
   ],
-  // Lampu Sepeda Depan (itemId: 1012)
   1012: [
     { id: 1201, itemId: 1012, name: 'Eka F.', avatar: 'https://i.pravatar.cc/150?u=ekaf', rating: 5, comment: 'Terang banget lampunya!', timestamp: randomTimestamp() },
     { id: 1202, itemId: 1012, name: 'Fani G.', avatar: 'https://i.pravatar.cc/150?u=fani', rating: 4, comment: 'Mode kedipnya bagus.', timestamp: randomTimestamp() },
@@ -57,7 +49,6 @@ export const initialProductReviews: { [itemId: number]: UserReview[] } = {
     { id: 1209, itemId: 1012, name: 'Maman N.', avatar: 'https://i.pravatar.cc/150?u=maman', rating: 5, comment: 'Terima kasih!', timestamp: randomTimestamp() },
     { id: 1210, itemId: 1012, name: 'Nani O.', avatar: 'https://i.pravatar.cc/150?u=nani', rating: 5, comment: 'Sangat berguna.', timestamp: randomTimestamp() },
   ],
-  // Kunci Sepeda Spiral (itemId: 1013)
   1013: [
     { id: 1301, itemId: 1013, name: 'Opik P.', avatar: 'https://i.pravatar.cc/150?u=opik', rating: 4, comment: 'Kuncinya berfungsi baik.', timestamp: randomTimestamp() },
     { id: 1302, itemId: 1013, name: 'Putu Q.', avatar: 'https://i.pravatar.cc/150?u=putu', rating: 5, comment: 'Kuat dan panjang.', timestamp: randomTimestamp() },
@@ -70,7 +61,6 @@ export const initialProductReviews: { [itemId: number]: UserReview[] } = {
     { id: 1309, itemId: 1013, name: 'Wati X.', avatar: 'https://i.pravatar.cc/150?u=wati', rating: 4, comment: 'Sesuai ekspektasi.', timestamp: randomTimestamp() },
     { id: 1310, itemId: 1013, name: 'Yoga Z.', avatar: 'https://i.pravatar.cc/150?u=yoga', rating: 5, comment: 'Nice!', timestamp: randomTimestamp() },
   ],
-  // Pompa Tangan Portabel (itemId: 1014)
   1014: [
     { id: 1401, itemId: 1014, name: 'Zara A.', avatar: 'https://i.pravatar.cc/150?u=zara', rating: 5, comment: 'Kecil tapi berfungsi!', timestamp: randomTimestamp() },
     { id: 1402, itemId: 1014, name: 'Budi S.', avatar: 'https://i.pravatar.cc/150?u=budi', rating: 4, comment: 'Agak pegal mompanya, tapi oke.', timestamp: randomTimestamp() },
@@ -83,7 +73,6 @@ export const initialProductReviews: { [itemId: number]: UserReview[] } = {
     { id: 1409, itemId: 1014, name: 'Hadi K.', avatar: 'https://i.pravatar.cc/150?u=hadi', rating: 5, comment: 'Top!', timestamp: randomTimestamp() },
     { id: 1410, itemId: 1014, name: 'Indah P.', avatar: 'https://i.pravatar.cc/150?u=indah', rating: 4, comment: 'Sesuai harga.', timestamp: randomTimestamp() },
   ],
-  // Tas Sadel Sepeda (itemId: 1015)
   1015: [
     { id: 1501, itemId: 1015, name: 'Joko S.', avatar: 'https://i.pravatar.cc/150?u=joko', rating: 5, comment: 'Pas buat nyimpen ban dalam cadangan.', timestamp: randomTimestamp() },
     { id: 1502, itemId: 1015, name: 'Lia A.', avatar: 'https://i.pravatar.cc/150?u=lia', rating: 4, comment: 'Ukurannya compact.', timestamp: randomTimestamp() },
@@ -96,7 +85,6 @@ export const initialProductReviews: { [itemId: number]: UserReview[] } = {
     { id: 1509, itemId: 1015, name: 'Sinta M.', avatar: 'https://i.pravatar.cc/150?u=sinta', rating: 4, comment: 'Desainnya simpel.', timestamp: randomTimestamp() },
     { id: 1510, itemId: 1015, name: 'Tono G.', avatar: 'https://i.pravatar.cc/150?u=tono', rating: 5, comment: 'Berguna sekali.', timestamp: randomTimestamp() },
   ],
-  // Botol Minum Sepeda (itemId: 1016)
   1016: [
     { id: 1601, itemId: 1016, name: 'Ujang R.', avatar: 'https://i.pravatar.cc/150?u=ujang', rating: 5, comment: 'Botolnya pas di holder.', timestamp: randomTimestamp() },
     { id: 1602, itemId: 1016, name: 'Vina S.', avatar: 'https://i.pravatar.cc/150?u=vina', rating: 4, comment: 'Tidak bocor.', timestamp: randomTimestamp() },
@@ -109,7 +97,6 @@ export const initialProductReviews: { [itemId: number]: UserReview[] } = {
     { id: 1609, itemId: 1016, name: 'Dina R.', avatar: 'https://i.pravatar.cc/150?u=dina', rating: 3, comment: 'Tutupnya agak keras dibuka.', timestamp: randomTimestamp() },
     { id: 1610, itemId: 1016, name: 'Eka F.', avatar: 'https://i.pravatar.cc/150?u=ekaf', rating: 5, comment: 'Sewa sekalian sama sepedanya.', timestamp: randomTimestamp() },
   ],
-  // Standar Paddock Sepeda (itemId: 1017)
   1017: [
     { id: 1701, itemId: 1017, name: 'Fani G.', avatar: 'https://i.pravatar.cc/150?u=fani', rating: 5, comment: 'Kokoh, sepeda jadi tegak.', timestamp: randomTimestamp() },
     { id: 1702, itemId: 1017, name: 'Gaga H.', avatar: 'https://i.pravatar.cc/150?u=gaga', rating: 4, comment: 'Agak susah pasangnya pertama kali.', timestamp: randomTimestamp() },
@@ -122,7 +109,6 @@ export const initialProductReviews: { [itemId: number]: UserReview[] } = {
     { id: 1709, itemId: 1017, name: 'Nani O.', avatar: 'https://i.pravatar.cc/150?u=nani', rating: 5, comment: 'Sip!', timestamp: randomTimestamp() },
     { id: 1710, itemId: 1017, name: 'Opik P.', avatar: 'https://i.pravatar.cc/150?u=opik', rating: 4, comment: 'Harga sewa oke.', timestamp: randomTimestamp() },
   ],
-  // Sepeda Anak Roda 3 (itemId: 1018)
   1018: [
     { id: 1801, itemId: 1018, name: 'Putu Q.', avatar: 'https://i.pravatar.cc/150?u=putu', rating: 5, comment: 'Anak saya suka banget!', timestamp: randomTimestamp() },
     { id: 1802, itemId: 1018, name: 'Qori R.', avatar: 'https://i.pravatar.cc/150?u=qori', rating: 5, comment: 'Warnanya cerah, menarik.', timestamp: randomTimestamp() },
@@ -135,9 +121,6 @@ export const initialProductReviews: { [itemId: number]: UserReview[] } = {
     { id: 1809, itemId: 1018, name: 'Yoga Z.', avatar: 'https://i.pravatar.cc/150?u=yoga', rating: 5, comment: 'Anak senang, orang tua tenang.', timestamp: randomTimestamp() },
     { id: 1810, itemId: 1018, name: 'Zara A.', avatar: 'https://i.pravatar.cc/150?u=zara', rating: 5, comment: 'Mantul!', timestamp: randomTimestamp() },
   ],
-
-  // --- DSLR World Rent (ID 102) ---
-  // Kamera DSLR Canon EOS (itemId: 2)
   2: [
     { id: 201, itemId: 2, name: 'Eko P.', avatar: 'https://i.pravatar.cc/150?u=eko', rating: 5, comment: 'Hasil fotonya tajam, lensa lengkap.', timestamp: randomTimestamp() },
     { id: 202, itemId: 2, name: 'Fitri H.', avatar: 'https://i.pravatar.cc/150?u=fitri', rating: 4, comment: 'Baterainya cepat habis, tapi kualitas bagus.', timestamp: randomTimestamp() },
@@ -150,7 +133,7 @@ export const initialProductReviews: { [itemId: number]: UserReview[] } = {
     { id: 209, itemId: 2, name: 'Agus W.', avatar: 'https://i.pravatar.cc/150?u=agus', rating: 5, comment: 'Mantap!', timestamp: randomTimestamp() },
     { id: 210, itemId: 2, name: 'Mega P.', avatar: 'https://i.pravatar.cc/150?u=mega', rating: 4, comment: 'Next time sewa lagi.', timestamp: randomTimestamp() },
   ],
-  // Lensa Telephoto 70-200mm (itemId: 6)
+
   6: [
     { id: 601, itemId: 6, name: 'Nina K.', avatar: 'https://i.pravatar.cc/150?u=nina', rating: 5, comment: 'Bokehnya mantap!', timestamp: randomTimestamp() },
     { id: 602, itemId: 6, name: 'Dodi H.', avatar: 'https://i.pravatar.cc/150?u=dodi', rating: 5, comment: 'Cocok buat foto candid.', timestamp: randomTimestamp() },

@@ -1,5 +1,4 @@
 const allRentalProducts = [
-  // --- Gunung-Jaya Bikes (ID 101) ---
   {
     id: 1, name: 'Sepeda Gunung XC Pro Series', seller: { id: 101, name: 'Gunung-Jaya Bikes', avatar: 'https://i.pravatar.cc/150?u=gunungjaya', bio: 'Menyediakan sepeda berkualitas...', rating: 4.9, itemsRented: 780 }, category: 'Outdoor',
     description: 'Sepeda Cross-Country (XC) performa tinggi dengan suspensi penuh. Cocok untuk trek gunung teknis dan balapan jarak jauh. Dilengkapi rem hidrolik dan grupset Shimano Deore 1x12. Ukuran tersedia: M dan L.',

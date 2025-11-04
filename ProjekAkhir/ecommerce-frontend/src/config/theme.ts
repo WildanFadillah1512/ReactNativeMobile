@@ -1,8 +1,5 @@
-// File: src/config/theme.ts
-// Ini adalah SATU-SATUNYA tempat untuk mendefinisikan warna.
-
 export const COLORS = {
-    // Warna utama dari DetailScreen
+
     background: '#0f172a',
     card: '#1e293b',
     textPrimary: 'white',

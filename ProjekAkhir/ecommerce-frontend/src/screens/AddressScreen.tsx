@@ -1,55 +1,123 @@
-// File: src/screens/AddressScreen.tsx
-
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
+  FlatList,
   ActivityIndicator,
   Alert,
+  SafeAreaView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import FeatherIcon from 'react-native-vector-icons/Feather';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../navigation/types';
-import { useAddresses } from '../context/AddressContext';
+import type { RootStackParamList, Address } from '../navigation/types';
+// Ganti 'useAddresses' ke 'useAddress' (singular)
+import { useAddress } from '../context/AddressContext';
 import { COLORS } from '../config/theme';
+import { useIsFocused } from '@react-navigation/native';
 
 type AddressScreenProps = NativeStackScreenProps<RootStackParamList, 'Address'>;
 
+// Komponen Kartu Alamat (Sudah Benar)
+const AddressCard: React.FC<{
+  address: Address;
+  isSelected: boolean;
+  onSelect: () => void;
+  onDelete: () => void;
+  onEdit: () => void;
+}> = ({ address, isSelected, onSelect, onDelete, onEdit }) => {
+  return (
+    <View style={[styles.addressCard, isSelected && styles.selectedAddressCard]}>
+      <TouchableOpacity onPress={onSelect} activeOpacity={0.8}>
+        <View style={styles.addressHeader}>
+          <Text style={styles.addressTitle}>{address.label}</Text>
+          {isSelected && (
+            <Icon name="check-circle" size={20} color={COLORS.cyan} />
+          )}
+        </View>
+        <View style={styles.addressBody}>
+          <Text style={styles.addressName}>{address.receiverName}</Text>
+          <Text style={styles.addressDetail}>{address.phone}</Text>
+          <Text style={styles.addressDetail}>{address.street}</Text>
+          <Text style={styles.addressDetail}>
+            {`${address.city}, ${address.province} ${address.postalCode}`}
+          </Text>
+        </View>
+      </TouchableOpacity>
+      
+      <View style={styles.actionButtonsContainer}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={onEdit}
+        >
+          <FeatherIcon name="edit-2" size={14} color={COLORS.textMuted} />
+          <Text style={styles.actionButtonText}>Edit</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.actionButton, styles.deleteButton]}
+          onPress={onDelete}
+        >
+          <FeatherIcon name="trash-2" size={14} color={COLORS.danger} />
+          <Text style={[styles.actionButtonText, styles.deleteButtonText]}>
+            Hapus
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
+// --- FIX 1: Definisikan separator sebagai fungsi stabil di luar ---
+const renderItemSeparator = () => <View style={styles.itemSeparator} />;
+
+// --- FIX 3: Definisikan ListEmptyComponent sebagai komponen stabil ---
+const ListEmptyComponent = () => (
+  <View style={styles.emptyContainer}>
+    <FeatherIcon name="map-pin" size={50} color={COLORS.textMuted} />
+    <Text style={styles.emptyText}>Belum ada alamat tersimpan.</Text>
+    <Text style={styles.emptySubText}>Tambahkan alamat baru untuk melanjutkan.</Text>
+  </View>
+);
+
+
 export default function AddressScreen({ route, navigation }: AddressScreenProps) {
-  const { currentAddressId, items } = route.params;
-  const { addresses, loading, deleteAddress } = useAddresses();
+  const isSelectMode = !!route.params?.items;
+  const itemsToCheckout = route.params?.items;
 
-  const [selectedId, setSelectedId] = useState<number | undefined>(currentAddressId);
-  const isAddressSelected = selectedId !== undefined;
+  const { addresses, loading, deleteAddress, refreshAddresses } = useAddress();
+  
+  const [selectedId, setSelectedId] = useState<number | undefined>(route.params?.currentAddressId);
+  const isFocused = useIsFocused();
 
-  // === Fungsi: Konfirmasi alamat ===
+  // Refresh Otomatis (Sudah Benar)
+  useEffect(() => {
+    if (isFocused) {
+      refreshAddresses();
+    }
+  }, [isFocused, refreshAddresses]);
+
+  
+  // (Fungsi handleConfirmAddress sudah benar)
   const handleConfirmAddress = () => {
-    if (!isAddressSelected) {
+    if (selectedId === undefined) {
       Alert.alert('Perhatian', 'Pilih salah satu alamat pengiriman.');
       return;
     }
-
-    if (!items || items.length === 0) {
-      Alert.alert('Error', 'Detail barang tidak ditemukan. Tidak dapat melanjutkan.');
-      console.error(
-        "AddressScreen: 'items' array is missing or empty when confirming address."
-      );
+    if (!itemsToCheckout || itemsToCheckout.length === 0) {
+      Alert.alert('Error', 'Detail barang tidak ditemukan.');
       navigation.navigate('Cart');
       return;
     }
-
     navigation.navigate('Checkout', {
-      items: items,
-      selectedAddressId: selectedId as number,
+      items: itemsToCheckout,
+      selectedAddressId: selectedId,
     });
   };
 
-  // === Fungsi: Hapus alamat ===
-  const handleDelete = (id: number) => {
+  // --- FIX 3: Bungkus 'handleDelete' dengan 'useCallback' ---
+  const handleDelete = useCallback((id: number) => {
     Alert.alert('Hapus Alamat', 'Yakin ingin menghapus alamat ini?', [
       { text: 'Batal', style: 'cancel' },
       {
@@ -62,15 +130,45 @@ export default function AddressScreen({ route, navigation }: AddressScreenProps)
               setSelectedId(undefined);
             }
           } catch (error) {
-            console.error('Gagal menghapus alamat:', error);
-            Alert.alert('Gagal', 'Tidak dapat menghapus alamat.');
+            console.error('Gagal menghapus alamat dari layar:', error);
           }
         },
       },
     ]);
-  };
+  }, [deleteAddress, selectedId]); // <-- Tambahkan dependensi
+  
+  // --- FIX 2 & 3: Bungkus 'handleEdit' dengan 'useCallback' & fix parameter ---
+  const handleEdit = useCallback((_address: Address) => { // <-- Ganti 'address'
+     Alert.alert("Fitur \"Edit\" belum dibuat", "Kita perlu API PUT /api/addresses/:id dulu.");
+     // navigation.navigate('EditAddress', { address: _address });
+  }, []); // <-- Tidak ada dependensi
 
-  // === Tampilan Loading ===
+  // --- FIX 3: Bungkus 'renderItem' dengan 'useCallback' & tambahkan deps ---
+  const renderItem = useCallback(({ item }: { item: Address }) => {
+    const isSelected = selectedId === item.id;
+    return (
+      <AddressCard
+        address={item}
+        isSelected={isSelected}
+        onSelect={() => setSelectedId(item.id)}
+        onDelete={() => handleDelete(item.id)} // <-- Panggil 'handleDelete'
+        onEdit={() => handleEdit(item)}     // <-- Panggil 'handleEdit'
+      />
+    );
+  }, [selectedId, handleDelete, handleEdit]); // <-- Tambahkan 'handleDelete' & 'handleEdit'
+
+  // --- FIX 3: Bungkus 'ListHeaderComponent' dengan 'useCallback' ---
+  const renderListHeader = useCallback(() => (
+    <TouchableOpacity
+      style={styles.addNewButton}
+      onPress={() => navigation.navigate('AddAddress')}
+    >
+      <FeatherIcon name="plus" size={16} color={COLORS.primary} />
+      <Text style={styles.addNewButtonText}>Tambah Alamat Baru</Text>
+    </TouchableOpacity>
+  ), [navigation]);
+
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -82,106 +180,46 @@ export default function AddressScreen({ route, navigation }: AddressScreenProps)
     );
   }
 
-  // === Tampilan Utama ===
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      {/* Header */}
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Icon name="arrow-left" size={24} color="white" />
+          <Icon name="arrow-left" size={20} color={COLORS.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Pilih Alamat</Text>
+        <Text style={styles.headerTitle}>{isSelectMode ? "Pilih Alamat" : "Alamat Saya"}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Tombol Tambah Alamat */}
-        <TouchableOpacity
-          style={styles.addNewButton}
-          onPress={() => navigation.navigate('AddAddress')}
-        >
-          <Icon name="plus" size={16} color={COLORS.cyan} />
-          <Text style={styles.addNewButtonText}>Tambah Alamat Baru</Text>
-        </TouchableOpacity>
-
-        {/* Daftar Alamat */}
-        {addresses.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Icon name="map-marker" size={50} color={COLORS.textMuted} />
-            <Text style={styles.emptyText}>Belum ada alamat tersimpan.</Text>
-            <Text style={styles.emptySubText}>Tambahkan alamat baru untuk melanjutkan.</Text>
-          </View>
-        ) : (
-          addresses.map((address) => {
-            const isSelected = selectedId === address.id;
-            return (
-              <View
-                key={address.id}
-                style={[styles.addressCard, isSelected && styles.selectedAddressCard]}
-              >
-                {/* Pilih Alamat */}
-                <TouchableOpacity
-                  onPress={() => setSelectedId(address.id)}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.addressHeader}>
-                    <Text style={styles.addressTitle}>{address.label}</Text>
-                    {isSelected && (
-                      <Icon name="check-circle" size={20} color={COLORS.cyan} />
-                    )}
-                  </View>
-                  <View style={styles.addressBody}>
-                    <Text style={styles.addressName}>{address.name}</Text>
-                    <Text style={styles.addressDetail}>{address.phone}</Text>
-                    <Text style={styles.addressDetail}>{address.fullAddress}</Text>
-                  </View>
-                </TouchableOpacity>
-
-                {/* Aksi Edit & Hapus */}
-                <View style={styles.actionButtonsContainer}>
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => navigation.navigate('EditAddress', { address })}
-                  >
-                    <Icon name="pencil" size={14} color={COLORS.textMuted} />
-                    <Text style={styles.actionButtonText}>Edit</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.actionButton, styles.deleteButton]}
-                    onPress={() => handleDelete(address.id)}
-                  >
-                    <Icon name="trash" size={14} color={COLORS.danger} />
-                    <Text
-                      style={[styles.actionButtonText, styles.deleteButtonText]}
-                    >
-                      Hapus
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            );
-          })
-        )}
-      </ScrollView>
-
-      {/* Footer */}
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={[
-            styles.confirmButton,
-            !isAddressSelected && styles.disabledConfirmButton,
-          ]}
-          onPress={handleConfirmAddress}
-          disabled={!isAddressSelected}
-        >
-          <Text style={styles.confirmButtonText}>Konfirmasi Alamat</Text>
-        </TouchableOpacity>
-      </View>
+      <FlatList
+        // --- FIX 4: Casting 'addresses' untuk mengatasi type mismatch ---
+        data={addresses as Address[]}
+        keyExtractor={(item) => item.id.toString()}
+        contentContainerStyle={styles.scrollContent}
+        renderItem={renderItem}
+        ListHeaderComponent={renderListHeader}
+        ListEmptyComponent={ListEmptyComponent}
+        ItemSeparatorComponent={renderItemSeparator}
+      />
+      
+      {isSelectMode && (
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={[
+              styles.confirmButton,
+              selectedId === undefined && styles.disabledConfirmButton,
+            ]}
+            onPress={handleConfirmAddress}
+            disabled={selectedId === undefined}
+          >
+            <Text style={styles.confirmButtonText}>Konfirmasi Alamat</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
 
-// === Styles ===
+// --- STYLESHEET (Disesuaikan) ---
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -192,10 +230,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 16,
     borderBottomWidth: 1,
-    borderColor: COLORS.card,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
   },
-  backButton: { width: 40, height: 40, justifyContent: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: COLORS.textPrimary },
+  backButton: { width: 40, height: 24, justifyContent: 'center' },
+  headerTitle: { fontSize: 18, fontWeight: '600', color: COLORS.textPrimary },
   headerSpacer: { width: 40 },
   scrollContent: { padding: 16, flexGrow: 1 },
   addNewButton: {
@@ -203,24 +242,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.card,
     borderRadius: 12,
     padding: 16,
     marginBottom: 20,
   },
   addNewButtonText: {
-    color: COLORS.cyan,
+    color: COLORS.primary,
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
     marginLeft: 8,
   },
   addressCard: {
     backgroundColor: COLORS.card,
     borderRadius: 12,
-    paddingTop: 16,
-    marginBottom: 16,
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: COLORS.card, 
     overflow: 'hidden',
   },
   selectedAddressCard: { borderColor: COLORS.primary },
@@ -228,18 +266,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12, 
+    paddingTop: 16, 
     paddingHorizontal: 16,
   },
   addressTitle: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '600' },
   addressBody: { paddingHorizontal: 16, paddingBottom: 16 },
   addressName: {
     color: COLORS.textPrimary,
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginBottom: 4,
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 6, 
   },
-  addressDetail: { color: COLORS.textSecondary, fontSize: 13, lineHeight: 20 },
+  addressDetail: { color: COLORS.textSecondary, fontSize: 14, lineHeight: 20 },
   actionButtonsContainer: {
     flexDirection: 'row',
     borderTopWidth: 1,
@@ -251,6 +290,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 12,
+    backgroundColor: COLORS.card,
   },
   actionButtonText: {
     color: COLORS.textMuted,
@@ -263,8 +303,8 @@ const styles = StyleSheet.create({
   footer: {
     padding: 16,
     borderTopWidth: 1,
-    borderColor: COLORS.card,
-    backgroundColor: COLORS.background,
+    borderColor: COLORS.border, 
+    backgroundColor: COLORS.card, 
   },
   confirmButton: {
     backgroundColor: COLORS.primary,
@@ -281,7 +321,7 @@ const styles = StyleSheet.create({
     paddingVertical: 50,
     backgroundColor: COLORS.card,
     borderRadius: 12,
-    minHeight: 200,
+    minHeight: 250, 
   },
   emptyText: {
     color: COLORS.textPrimary,
@@ -296,4 +336,9 @@ const styles = StyleSheet.create({
     marginTop: 5,
     textAlign: 'center',
   },
+  // --- FIX 1: Pindahkan inline style ke sini ---
+  itemSeparator: {
+    height: 16,
+  },
 });
+

@@ -12,7 +12,7 @@ import { useRoute, type RouteProp, useNavigation } from '@react-navigation/nativ
 import type { RootStackParamList, RootStackNavigationProp } from '../navigation/types';
 import type { ApiProduct, ApiSeller } from '../types';
 import { COLORS } from '../config/theme';
-import { API_URL } from '../config/api';
+import { BASE_URL } from '../config/api';
 
 
 const SORT_OPTIONS: { id: SortOptionId; label: string }[] = [
@@ -28,7 +28,7 @@ const buildImageUri = (filename?: string | null): string | null => {
     if (filename.startsWith('http://') || filename.startsWith('https://')) {
         return filename;
     }
-    return `${API_URL}/images/${filename}`;
+    return `${BASE_URL}/images/${filename}`;
 };
 
 const formatPrice = (price: number): string => {
@@ -420,7 +420,7 @@ export default function SearchResultsScreen() {
             try {
                 // Ganti '/api/products' dengan endpoint pencarian Anda jika ada
                 // Untuk sekarang, kita filter di client side
-                const response = await fetch(`${API_URL}/api/products`);
+                const response = await fetch(`${BASE_URL}/api/products`);
                 if (!response.ok) {
                     throw new Error(`Server responded with status ${response.status}`);
                 }

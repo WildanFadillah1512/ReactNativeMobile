@@ -6,7 +6,7 @@ import {
     Text,
     StyleSheet,
     FlatList,
-    Image, // Pastikan Image diimpor
+    Image, 
     TouchableOpacity,
     Dimensions,
     ActivityIndicator,
@@ -17,51 +17,29 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { RootStackParamList } from '../navigation/types';
-// --- PERBAIKAN 1: Hapus import 'RentalItem' ---
-// import type { RentalItem } from '../types';
-// Import tipe API yang benar
-import type { ApiProduct } from '../types'; // (Asumsi sudah ada di ../types)
-// --- AKHIR PERBAIKAN 1 ---
+import type { ApiProduct } from '../types'; 
 import { useLikes } from '../context/LikeContext';
-import { API_URL } from '../config/api'; 
-
-// Tipe ApiSeller & ApiProduct (Sudah Benar, bisa dihapus jika diimpor dari ../types)
-// type ApiSeller = { ... };
-// type ApiProduct = { ... };
-
+import apiClient, { BASE_URL } from '../config/api';
+import { COLORS } from '../config/theme';
 const { width } = Dimensions.get('window');
 
-// Tipe Props Navigasi (Sudah Benar)
 type SavedScreenProps = NativeStackScreenProps<RootStackParamList, 'Saved'>;
 
-// Warna (Sudah Benar)
-const COLORS = {
-    background: '#0f172a',
-    card: '#1e293b',
-    textPrimary: 'white',
-    textSecondary: '#cbd5e1',
-    textMuted: '#94a3b8',
-    primary: '#06b6d4', // Warna utama (biru-toska)
-    cyan: '#22d3ee',   // Warna alternatif (cyan)
-    danger: '#ef4444', // Merah untuk unlike
-    border: '#334155',
-    starActive: '#facc15', // Kuning bintang
-};
 
-// Interface untuk Props SavedItemCard (Sudah Benar)
+// Interface untuk Props SavedItemCard
 interface SavedItemCardProps {
-    item: ApiProduct; // <-- Terima ApiProduct
+    item: ApiProduct; 
     onUnlike: (id: number) => void;
-    onPress: (item: ApiProduct) => void; // <-- Terima ApiProduct
+    onPress: (item: ApiProduct) => void; 
 }
 
-// Komponen Card Item (Sudah Benar - Tampilkan data ApiProduct)
+// Komponen Card Item
 const SavedItemCard: React.FC<SavedItemCardProps> = ({ item, onUnlike, onPress }) => (
     <TouchableOpacity style={styles.card} onPress={() => onPress(item)} activeOpacity={0.8}>
-        {/* Gambar dari URL */}
+        {/* --- 2. GANTI API_URL MENJADI BASE_URL --- */}
         {item.imageUrl ? (
             <Image
-                source={{ uri: `${API_URL}/images/${item.imageUrl}` }}
+                source={{ uri: `${BASE_URL}/images/${item.imageUrl}` }} // <-- Ganti di sini
                 style={styles.image}
                 resizeMode="cover"
                 onError={(e) => console.log('Image Load Error (Saved):', e.nativeEvent.error)}
@@ -71,16 +49,16 @@ const SavedItemCard: React.FC<SavedItemCardProps> = ({ item, onUnlike, onPress }
                  <Icon name="photo" size={40} color={COLORS.border} />
             </View>
         )}
-        {/* Tombol Unlike */}
+        {/* --- AKHIR PERUBAHAN --- */}
+
         <TouchableOpacity
             style={styles.likeButton}
             onPress={() => onUnlike(item.id)}
-            onPressOut={(e) => e.stopPropagation()} // Cegah klik card
+            onPressOut={(e) => e.stopPropagation()}
             activeOpacity={0.7}
         >
             <Icon name="heart" size={18} color={COLORS.danger} />
         </TouchableOpacity>
-        {/* Card Body */}
         <View style={styles.cardBody}>
             <Text style={styles.cardTitle} numberOfLines={1}>{item.name}</Text>
             <View style={styles.locationRow}>
@@ -88,14 +66,13 @@ const SavedItemCard: React.FC<SavedItemCardProps> = ({ item, onUnlike, onPress }
                 <Text style={styles.locationText}>{item.location || 'Lokasi tidak diketahui'}</Text>
             </View>
             <View style={styles.priceRow}>
-                 {/* Harga (format dari angka) */}
                  <Text style={styles.priceText}>
-                     <Text style={styles.priceHighlight}>Rp {item.price.toLocaleString('id-ID')}</Text>
-                     {item.period || ''}
+                       <Text style={styles.priceHighlight}>Rp {item.price.toLocaleString('id-ID')}</Text>
+                       {item.period || ''}
                  </Text>
                  <View style={styles.ratingBox}>
-                     <Icon name="star" size={11} color={COLORS.starActive} />
-                     <Text style={styles.ratingText}>{(item.rating ?? 0).toFixed(1)}</Text>
+                       <Icon name="star" size={11} color={COLORS.starActive} />
+                       <Text style={styles.ratingText}>{(item.rating ?? 0).toFixed(1)}</Text>
                  </View>
             </View>
         </View>
@@ -104,29 +81,39 @@ const SavedItemCard: React.FC<SavedItemCardProps> = ({ item, onUnlike, onPress }
 
 
 export default function SavedScreen({ navigation }: SavedScreenProps) {
-    // Hooks & State (Sudah Benar)
+    // Hooks & State
     const { likedIds, toggleLike, isLoading: likesLoading } = useLikes();
     const [allApiProducts, setAllApiProducts] = useState<ApiProduct[]>([]);
     const [isLoadingApi, setIsLoadingApi] = useState(true);
 
-    // Fetch Data (Sudah Benar)
+    // --- 3. UBAH FETCH DATA (Gunakan apiClient) ---
     useEffect(() => {
         const fetchAllProducts = async () => {
             try {
                 setIsLoadingApi(true);
-                const response = await fetch(`${API_URL}/api/products`);
-                if (!response.ok) { throw new Error(`Fetch error (${response.status})`); }
-                const data: ApiProduct[] = await response.json();
-                setAllApiProducts(data);
-            } catch (error) {
+                // Ganti fetch dengan apiClient.get
+                const response = await apiClient.get('/products');
+                
+                // axios otomatis melempar error, jadi tidak perlu cek response.ok
+                // Data ada di 'response.data'
+                setAllApiProducts(response.data);
+
+            } catch (error: any) {
                 console.error("Gagal fetch semua produk:", error);
-                // Alert.alert("Error", "Gagal memuat data produk.");
+                const errorMessage = error.message || "Gagal memuat data produk.";
+                
+                if (error.code === 'ERR_NETWORK') {
+                    Alert.alert("Error Koneksi", `Tidak dapat terhubung ke server.\nPastikan server backend (${BASE_URL}) berjalan.`);
+                } else {
+                    Alert.alert("Error Memuat Data", errorMessage);
+                }
             } finally {
                 setIsLoadingApi(false);
             }
         };
         fetchAllProducts();
     }, []); // Fetch sekali
+    // --- AKHIR PERUBAHAN ---
 
     // Filter savedItems (Sudah Benar)
     const savedItems = useMemo(
@@ -144,21 +131,10 @@ export default function SavedScreen({ navigation }: SavedScreenProps) {
         }
     };
 
-    // --- PERBAIKAN 2: Hapus fungsi 'convertToLegacyItem' ---
-    // Fungsi ini tidak lagi diperlukan karena kita mengirim productId ke DetailScreen.
-    // const convertToLegacyItem = (item: ApiProduct): RentalItem => { ... };
-    // --- AKHIR PERBAIKAN 2 ---
-
-    // --- PERBAIKAN 3: Perbaiki navigasi ke Detail ---
-    const handleNavigateToDetail = (item: ApiProduct) => { // 'item' adalah ApiProduct
-        // Hapus kode lama yang mengirim 'item':
-        // const legacyItem = convertToLegacyItem(item);
-        // navigation.navigate('Detail', { item: legacyItem });
-
-        // Kirim 'productId' saja, sesuai dengan RootStackParamList
+    // Navigasi ke Detail (Sudah Benar)
+    const handleNavigateToDetail = (item: ApiProduct) => {
         navigation.navigate('Detail', { productId: item.id });
     };
-    // --- AKHIR PERBAIKAN 3 ---
 
     // Loading State Gabungan (Sudah Benar)
     const isLoading = likesLoading || isLoadingApi;
@@ -166,39 +142,41 @@ export default function SavedScreen({ navigation }: SavedScreenProps) {
     // --- RENDER --- (Sudah Benar)
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
-            {/* Header (Sudah Benar) */}
+            {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                       <Icon name="arrow-left" size={22} color="white" />
+                        <Icon name="arrow-left" size={22} color="white" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Barang Disimpan</Text>
                 <View style={styles.headerSpacer} />
             </View>
 
-            {/* Konten (Sudah Benar) */}
+            {/* Konten */}
             {isLoading ? (
                  <ActivityIndicator style={styles.loadingIndicator} size="large" color={COLORS.primary} />
             ) : (
                 <FlatList
-                    data={savedItems} // Data adalah ApiProduct[]
-                    renderItem={({ item }) => ( // item adalah ApiProduct
+                    data={savedItems} 
+                    renderItem={({ item }) => ( 
                         <SavedItemCard
-                            item={item} // Kirim ApiProduct
+                            item={item} 
                             onUnlike={handleUnlike}
-                            onPress={handleNavigateToDetail} // Handler sudah diperbaiki
+                            onPress={handleNavigateToDetail}
                         />
                     )}
                     keyExtractor={(item) => item.id.toString()}
                     numColumns={2}
                     columnWrapperStyle={styles.columnWrapper}
                     contentContainerStyle={styles.listContent}
-                    ListEmptyComponent={ // Komponen jika daftar kosong
+                    ListEmptyComponent={
                         <View style={styles.emptyContainer}>
                             <Icon name="heart-o" size={60} color={COLORS.textMuted} />
                             <Text style={styles.emptyText}>Anda belum menyimpan barang apapun.</Text>
                             <TouchableOpacity
                                 style={styles.browseButton}
-                                onPress={() => navigation.navigate('Home')} // Navigasi ke Home
+                                // --- PERBAIKAN DI SINI ---
+                                // Navigasi ke 'Main' (navigator), lalu ke screen 'Home' (di dalam tab)
+                                onPress={() => navigation.navigate('Main', { screen: 'Home' })}
                             >
                                 <Text style={styles.browseButtonText}>Mulai Cari Barang</Text>
                             </TouchableOpacity>
@@ -206,33 +184,32 @@ export default function SavedScreen({ navigation }: SavedScreenProps) {
                     }
                 />
             )}
-            {/* SafeAreaView untuk bottom tidak diperlukan jika tidak ada Bottom Nav */}
         </SafeAreaView>
     );
 }
 
-// Styles (Tidak ada perubahan signifikan, sudah bagus)
+// Styles (Sudah Benar)
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: COLORS.background },
     header: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
         paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderColor: COLORS.border,
     },
-    backButton: { padding: 4, width: 40, height: 40, justifyContent: 'center', alignItems: 'flex-start'}, // Perbesar area klik
+    backButton: { padding: 4, width: 40, height: 40, justifyContent: 'center', alignItems: 'flex-start'},
     headerTitle: { fontSize: 18, fontWeight: '600', color: COLORS.textPrimary },
-    headerSpacer: { width: 40 }, // Sesuaikan agar simetris
-    listContent: { padding: 16, flexGrow: 1 }, // flexGrow agar emptyContainer bisa di tengah
+    headerSpacer: { width: 40 },
+    listContent: { padding: 16, flexGrow: 1 },
     columnWrapper: { justifyContent: 'space-between' },
     card: {
         backgroundColor: COLORS.card, borderRadius: 12, marginBottom: 16,
-        width: (width / 2) - 24, // Kalkulasi lebar kolom (padding 16*2, gap antar kolom misal 16)
+        width: (width / 2) - 24,
         overflow: 'hidden',
     },
     imagePlaceholder: {
-        width: '100%', height: 130, backgroundColor: COLORS.background, // Tinggi gambar
+        width: '100%', height: 130, backgroundColor: COLORS.background,
         justifyContent: 'center', alignItems: 'center',
     },
-    image: { width: '100%', height: 130 }, // Style untuk gambar URL
+    image: { width: '100%', height: 130 },
     likeButton: {
         position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(30, 41, 59, 0.7)',
         borderRadius: 15, width: 30, height: 30, justifyContent: 'center', alignItems: 'center', zIndex: 10,
@@ -240,18 +217,18 @@ const styles = StyleSheet.create({
     cardBody: { padding: 10 },
     cardTitle: { color: COLORS.textPrimary, fontWeight: '600', fontSize: 14, marginBottom: 4 },
     locationRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
-    locationText: { color: COLORS.textMuted, fontSize: 11, marginLeft: 5, flexShrink: 1 }, // flexShrink jika lokasi panjang
+    locationText: { color: COLORS.textMuted, fontSize: 11, marginLeft: 5, flexShrink: 1 },
     priceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4, },
-    priceText: { fontSize: 12, color: COLORS.textMuted, flexShrink: 1, marginRight: 4 }, // flexShrink jika harga+period panjang
+    priceText: { fontSize: 12, color: COLORS.textMuted, flexShrink: 1, marginRight: 4 },
     priceHighlight: { color: COLORS.cyan, fontWeight: 'bold', fontSize: 15, marginRight: 3 },
     ratingBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.border, borderRadius: 8, paddingHorizontal: 5, paddingVertical: 2, },
     ratingText: { color: COLORS.textPrimary, fontSize: 10, marginLeft: 3 },
-    emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40, paddingBottom: 50 }, // Padding bawah agar tidak terlalu mepet
+    emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40, paddingBottom: 50 },
     emptyText: { color: COLORS.textMuted, fontSize: 16, textAlign: 'center', marginTop: 16, marginBottom: 24, lineHeight: 22, },
     browseButton: { backgroundColor: COLORS.primary, paddingVertical: 12, paddingHorizontal: 30, borderRadius: 10, },
     browseButtonText: { color: 'white', fontSize: 14, fontWeight: '600', },
     loadingIndicator: {
-        flex: 1, // Mengisi ruang saat loading
+        flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
     },

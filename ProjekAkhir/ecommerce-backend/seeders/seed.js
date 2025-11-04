@@ -1,9 +1,8 @@
 const { PrismaClient } = require('@prisma/client');
-const { allRentalProducts } = require('./data.js'); // Impor data Anda
+const { allRentalProducts } = require('./data.js'); 
 
 const prisma = new PrismaClient();
 
-// Fungsi untuk membersihkan harga (misal 'Rp 50.000' -> 50000)
 function cleanPrice(priceString) {
   if (!priceString) return 0;
   return parseFloat(priceString.replace(/Rp /g, '').replace(/\./g, ''));
@@ -11,14 +10,10 @@ function cleanPrice(priceString) {
 
 async function main() {
   console.log('Start seeding ...');
-
-  // 1. Hapus semua data lama (agar tidak duplikat)
   await prisma.product.deleteMany({});
   await prisma.seller.deleteMany({});
   console.log('Deleted old data.');
 
-  // 2. Buat Sellers (Penjual)
-  // Kita ambil data seller yang unik dari produk
   const sellersData = {};
   allRentalProducts.forEach(product => {
     if (!sellersData[product.seller.id]) {
@@ -39,21 +34,19 @@ async function main() {
     data: sellersToCreate,
   });
   console.log(`Created ${sellersToCreate.length} sellers.`);
-
-  // 3. Buat Products (Produk)
   const productsToCreate = allRentalProducts.map(product => ({
     id: product.id,
     name: product.name,
     price: cleanPrice(product.price),
     description: product.description,
-    imageUrl: product.image, // Ini sekarang string nama file
+    imageUrl: product.image, 
     category: product.category,
     rating: product.rating,
     reviews: product.reviews,
     trending: product.trending,
     location: product.location,
     period: product.period,
-    sellerId: product.seller.id, // Hubungkan ke Seller
+    sellerId: product.seller.id,
   }));
 
   await prisma.product.createMany({

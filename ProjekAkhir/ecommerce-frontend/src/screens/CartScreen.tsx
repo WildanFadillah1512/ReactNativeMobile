@@ -1,5 +1,3 @@
-// File: src/screens/CartScreen.tsx (FINAL - Menggunakan ApiProduct, kalkulasi benar)
-
 import React, { useMemo } from 'react';
 import {
     View, Text, StyleSheet, FlatList, Image, TouchableOpacity,
@@ -8,22 +6,20 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../navigation/types'; // Pastikan path benar
-import { useCart } from '../context/CartContext'; // useCart sekarang menyediakan CartEntry[] dg ApiProduct
+import { RootStackParamList } from '../navigation/types'; 
+import { useCart } from '../context/CartContext'; 
 import type { ApiProduct, CartEntry } from '../types';
-import { formatCurrency } from '../utils/riceParse'; // (Asumsi nama file: priceParse)
+import { formatCurrency } from '../utils/riceParse'; 
 import { COLORS } from '../config/theme';
-import { API_URL } from '../config/api';
+import { BASE_URL } from '../config/api';
 
 
-// Komponen Checkbox Kustom (Sudah Benar)
 const CustomCheckbox: React.FC<{ value: boolean; onValueChange: () => void; }> = ({ value, onValueChange }) => (
     <TouchableOpacity onPress={onValueChange} style={styles.checkboxBase}>
         {value && <Icon name="check" size={14} color={COLORS.primary} />}
     </TouchableOpacity>
 );
 
-// Komponen Stepper (Sudah Benar)
 interface StepperProps { value: number; onIncrement: () => void; onDecrement: () => void; min: number; max: number; }
 const Stepper: React.FC<StepperProps> = ({ value, onIncrement, onDecrement, min, max }) => (
      <View style={styles.stepperContainer}>
@@ -37,56 +33,44 @@ const Stepper: React.FC<StepperProps> = ({ value, onIncrement, onDecrement, min,
      </View>
 );
 
-// --- PERBAIKAN 3: Tambahkan Helper Gambar ---
 const buildImageUri = (filename?: string | null) => {
     if (!filename) return null;
     if (filename.startsWith('http://') || filename.startsWith('https://')) return filename;
-    return `${API_URL}/images/${filename}`;
+    return `${BASE_URL}/images/${filename}`;
 };
-// --- AKHIR PERBAIKAN 3 ---
 
-// Tipe Props Navigasi (Sudah Benar)
 type CartScreenProps = NativeStackScreenProps<RootStackParamList, 'Cart'>;
 
-// --- PERBAIKAN 4: Props CartListItem - onPressItem menerima ApiProduct ---
 interface CartListItemProps {
-    cartEntry: CartEntry; // Terima CartEntry (berisi ApiProduct)
+    cartEntry: CartEntry; 
     onRemove: (id: number) => void;
-    onPressItem: (item: ApiProduct) => void; // <-- FIX: Terima ApiProduct
+    onPressItem: (item: ApiProduct) => void; 
     onToggleSelect: (id: number) => void;
     onUpdateDuration: (id: number, duration: number) => void;
 }
-// --- AKHIR PERBAIKAN 4 ---
-
-// --- PERBAIKAN 5: Komponen CartListItem - Tampilkan gambar & harga benar ---
 const CartListItem: React.FC<CartListItemProps> = ({
     cartEntry, onRemove, onPressItem, onToggleSelect, onUpdateDuration
 }) => {
-    const { item, selected, duration } = cartEntry; // 'item' di sini adalah ApiProduct
+    const { item, selected, duration } = cartEntry;
     const MIN_DURATION = 1;
-    const MAX_DURATION = 30; // Sesuaikan jika perlu
+    const MAX_DURATION = 30; 
 
-    // Buat URI gambar dari item.imageUrl
     const imageUri = buildImageUri(item.imageUrl);
 
     return (
         <View style={[styles.itemContainer, selected && styles.itemContainerSelected]}>
-            {/* Checkbox (Sudah Benar) */}
             <CustomCheckbox
                 value={selected}
                 onValueChange={() => onToggleSelect(item.id)}
             />
 
-            {/* Gambar (Klik kirim ApiProduct) */}
             <TouchableOpacity onPress={() => onPressItem(item)} activeOpacity={0.7} style={styles.imageTouchable}>
-                {/* Tampilkan Gambar dari URI */}
                 <Image
                     source={imageUri ? { uri: imageUri } : require('../assets/images/placeholder.png')} // Sesuaikan path placeholder
                     style={styles.itemImage}
                 />
             </TouchableOpacity>
 
-            {/* Detail Item */}
             <View style={styles.itemDetails}>
                 <Text style={styles.itemName} numberOfLines={2}>{item.name}</Text>
                 <Text style={styles.itemSeller}>oleh {item.seller.name}</Text>
@@ -95,7 +79,6 @@ const CartListItem: React.FC<CartListItemProps> = ({
                     <Text style={styles.priceHighlight}>{formatCurrency(item.price)}</Text>
                     {item.period ? ` ${item.period}` : ''}
                 </Text>
-                {/* Stepper (Sudah Benar) */}
                 <View style={styles.stepperWrapper}>
                     <Stepper
                         value={duration}
@@ -107,18 +90,15 @@ const CartListItem: React.FC<CartListItemProps> = ({
                 </View>
             </View>
 
-            {/* Tombol Hapus (Sudah Benar) */}
             <TouchableOpacity style={styles.removeButton} onPress={() => onRemove(item.id)}>
                 <Icon name="trash-o" size={20} color={COLORS.danger} />
             </TouchableOpacity>
         </View>
     );
 };
-// --- AKHIR PERBAIKAN 5 ---
 
 
 export default function CartScreen({ navigation }: CartScreenProps) {
-    // Hooks Context (Sudah Benar - cartEntries berisi ApiProduct)
     const {
         cartEntries,
         removeFromCart,
@@ -126,31 +106,25 @@ export default function CartScreen({ navigation }: CartScreenProps) {
         clearCart,
         toggleItemSelection,
         updateItemDuration,
-        getSelectedItemsForCheckout // Mengembalikan CheckoutRentalItem[]
+        getSelectedItemsForCheckout
     } = useCart();
 
-    // --- PERBAIKAN 6: Kalkulasi Total - Langsung gunakan harga angka ---
     const { selectedItemsCount, totalPrice } = useMemo(() => {
         let count = 0;
         let total = 0;
         cartEntries.forEach(entry => {
             if (entry.selected) {
                 count++;
-                // Langsung kalikan harga (angka) dengan durasi
-                total += entry.item.price * entry.duration; // <-- FIX: Hapus parsePrice
+                total += entry.item.price * entry.duration; 
             }
         });
         return { selectedItemsCount: count, totalPrice: total };
-    }, [cartEntries]); // Kalkulasi ulang jika cartEntries berubah
-    // --- AKHIR PERBAIKAN 6 ---
-
-    // Handlers (Remove, Clear - Sudah Benar)
+    }, [cartEntries]); 
     const handleRemoveItem = (id: number) => {
         Alert.alert( "Hapus Item", "Yakin hapus item ini?",
             [ { text: "Batal"}, { text: "Hapus", style: "destructive", onPress: async () => { try { await removeFromCart(id); } 
                 catch (error) {
                 console.error("Gagal fetch semua produk:", error);
-                // Alert.alert("Error", "Gagal memuat data produk.");
             } finally {
                 Alert.alert("Gagal", "Tidak dapat menghapus."); }}}] );
     };
@@ -218,7 +192,7 @@ export default function CartScreen({ navigation }: CartScreenProps) {
                             <Icon name="shopping-bag" size={60} color="#475569" />
                             <Text style={styles.emptyTitle}>Keranjang Anda Kosong</Text>
                             <Text style={styles.emptySubtitle}>Ayo cari barang menarik lainnya!</Text>
-                               <TouchableOpacity style={styles.browseButton} onPress={() => navigation.navigate('Home')}>
+                               <TouchableOpacity style={styles.browseButton} onPress={() => navigation.navigate('Main', { screen: 'Home' })}>
                                    <Text style={styles.browseButtonText}>Cari Barang Sekarang</Text>
                                </TouchableOpacity>
                         </View>

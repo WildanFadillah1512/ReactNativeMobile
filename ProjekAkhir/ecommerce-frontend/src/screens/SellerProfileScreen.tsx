@@ -19,18 +19,21 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import type { ApiProduct } from '../types';
 import { COLORS } from '../config/theme';
-import { API_URL } from '../config/api';
 
+// --- 1. GANTI IMPORT API ---
+import apiClient, { BASE_URL } from '../config/api';
+// --- AKHIR PERUBAHAN ---
+
+// --- 2. PERBAIKI buildImageUri ---
 const buildImageUri = (filename?: string | null): string | null => {
     if (!filename) return null;
-    // Jika sudah URL lengkap, kembalikan
     if (filename.startsWith('http://') || filename.startsWith('https://')) {
         return filename;
     }
-    // Jika hanya nama file, tambahkan API_URL
-    return `${API_URL}/images/${filename}`;
+    // Gunakan BASE_URL (http://IP:3000) bukan API_URL (http://IP:3000/api)
+    return `${BASE_URL}/images/${filename}`; // <-- Ganti di sini
 };
-// --- AKHIR PERBAIKAN 3 ---
+// --- AKHIR PERUBAHAN ---
 
 
 // Tipe navigasi
@@ -47,13 +50,11 @@ export default function SellerProfileScreen({
     navigation,
 }: SellerProfileScreenProps) {
     
-    // Dapatkan 'seller' langsung dari params.
     const { seller } = route.params;
-
     const [allSellerProducts, setAllSellerProducts] = useState<ApiProduct[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    // useEffect untuk mengambil data produk seller dari API
+    // --- 3. PERBAIKI useEffect (Gunakan apiClient) ---
     useEffect(() => {
         const fetchSellerProducts = async () => {
             if (!seller || typeof seller.id !== 'number') {
@@ -64,17 +65,25 @@ export default function SellerProfileScreen({
 
             try {
                 setIsLoading(true);
-                const response = await fetch(`${API_URL}/api/sellers/${seller.id}/products`);
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('Fetch Seller Products Error:', errorText);
-                    throw new Error(`Gagal mengambil data (${response.status})`);
-                }
-                const data: ApiProduct[] = await response.json();
-                setAllSellerProducts(data);
-            } catch (error) {
+                // Ganti fetch dengan apiClient.get (tanpa /api)
+                const response = await apiClient.get(`/sellers/${seller.id}/products`);
+                
+                // axios otomatis melempar error, jadi tidak perlu cek response.ok
+                // Data ada di 'response.data'
+                setAllSellerProducts(response.data);
+
+            } catch (error: any) {
                 console.error("Fetch Error:", error);
-                Alert.alert('Error Jaringan', error instanceof Error ? error.message : 'Tidak bisa terhubung ke server.');
+                const errorMessage = error.message || 'Tidak bisa terhubung ke server.';
+                
+                if (error.code === 'ERR_NETWORK') {
+                     Alert.alert("Error Koneksi", `Tidak dapat terhubung ke server.\nPastikan server backend (${BASE_URL}) berjalan.`);
+                } else if (error.response?.status === 404) {
+                    Alert.alert('Error', 'Penjual tidak ditemukan.');
+                }
+                else {
+                    Alert.alert('Error Jaringan', errorMessage);
+                }
             } finally {
                 setIsLoading(false);
             }
@@ -82,10 +91,11 @@ export default function SellerProfileScreen({
 
         fetchSellerProducts();
     }, [seller]); // Jalankan ulang jika objek seller berubah
+    // --- AKHIR PERUBAHAN ---
 
-    // --- Memoized Logic (Filter, Kategori, dll) ---
+    // --- Memoized Logic (Sudah Benar) ---
     const displayedSellerProducts = useMemo(
-        () => allSellerProducts.slice(0, 10), // Ambil 10 pertama
+        () => allSellerProducts.slice(0, 10),
         [allSellerProducts]
     );
 
@@ -106,14 +116,13 @@ export default function SellerProfileScreen({
 
     // Render satu produk di grid
     const renderProduct = ({ item }: { item: ApiProduct }) => {
-        // --- PERBAIKAN 4: Gunakan buildImageUri ---
+        // buildImageUri sudah diperbaiki di atas
         const imageUrl = buildImageUri(item.imageUrl);
         
         return (
             <TouchableOpacity
                 style={styles.productCard}
                 onPress={() => {
-                    // Navigasi HANYA menggunakan 'productId'
                     navigation.push('Detail', { productId: item.id });
                 }}
             >
@@ -147,12 +156,12 @@ export default function SellerProfileScreen({
         return (
             <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
                  <View style={styles.header}>
-                    <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                        <Icon name="arrow-left" size={22} color="white" />
-                    </TouchableOpacity>
-                    <Text style={styles.headerTitle}>{seller.name}</Text>
-                    <View style={styles.headerSpacer} />
-                </View>
+                     <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+                         <Icon name="arrow-left" size={22} color="white" />
+                     </TouchableOpacity>
+                     <Text style={styles.headerTitle}>{seller.name}</Text>
+                     <View style={styles.headerSpacer} />
+                 </View>
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={COLORS.cyan} />
                 </View>
@@ -160,7 +169,7 @@ export default function SellerProfileScreen({
         );
     }
 
-    // --- PERBAIKAN 5: Gunakan buildImageUri untuk Avatar ---
+    // buildImageUri sudah diperbaiki di atas
     const sellerAvatarUrl = buildImageUri(seller.avatar);
 
     return (
@@ -168,9 +177,9 @@ export default function SellerProfileScreen({
             <FlatList
                 ListHeaderComponent={
                     <>
-                        {/* HERO SECTION (Data dari route.params) */}
+                        {/* HERO SECTION */}
                         <View style={styles.hero}>
-                            {/* Header ditaruh di dalam ListHeaderComponent */}
+                            {/* Header */}
                             <View style={styles.header}>
                                 <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
                                     <Icon name="arrow-left" size={22} color="white" />
@@ -194,7 +203,7 @@ export default function SellerProfileScreen({
                                     navigation.navigate('Chat', {
                                         sellerId: seller.id,
                                         sellerName: seller.name,
-                                        // --- PERBAIKAN 6: Kirim URL avatar yang sudah valid ---
+                                        // Kirim URL avatar yang sudah valid
                                         sellerAvatar: sellerAvatarUrl || undefined,
                                     })
                                 }
@@ -293,10 +302,7 @@ export default function SellerProfileScreen({
     );
 }
 
-
-// =======================================================
-// 🎨 STYLES (DIRAPIKAN & DIKELOMPOKKAN)
-// =======================================================
+// Styles (Sudah Benar)
 const styles = StyleSheet.create({
     // --- 1. Core Layout & Loading ---
     container: { 
@@ -304,7 +310,7 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.background 
     },
     loadingContainer: { 
-        flex: 1, // Gunakan flex 1 agar mengisi sisa ruang
+        flex: 1,
         justifyContent: 'center', 
         alignItems: 'center', 
         backgroundColor: COLORS.background, 
@@ -317,29 +323,25 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between', 
         paddingHorizontal: 16, 
         paddingVertical: 12, 
-        // Hapus border, karena sekarang menyatu dengan hero
-        // borderBottomWidth: 1, 
-        // borderColor: COLORS.border, 
-        width: '100%', // Pastikan lebar penuh di dalam hero
-        position: 'absolute', // Posisikan di atas hero
+        width: '100%',
+        position: 'absolute',
         top: 0,
         left: 0,
         right: 0,
-        zIndex: 10, // Pastikan di atas
+        zIndex: 10,
     },
     backButton: { 
         padding: 4,
-        backgroundColor: 'rgba(0,0,0,0.3)', // Latar belakang agar terlihat
+        backgroundColor: 'rgba(0,0,0,0.3)',
         borderRadius: 20,
     },
     headerTitle: { 
         fontSize: 18, 
         fontWeight: '600', 
         color: COLORS.textPrimary,
-        // Judul sekarang di tengah (backButton dan spacer menyeimbangkan)
     },
     headerSpacer: { 
-        width: 30 // Sesuaikan dengan ukuran backButton
+        width: 30
     },
 
     // --- 3. Hero Section (Info Penjual) ---
@@ -348,7 +350,7 @@ const styles = StyleSheet.create({
         paddingVertical: 24, 
         paddingHorizontal: 16, 
         backgroundColor: COLORS.card, 
-        paddingTop: 80, // Beri ruang untuk header absolut
+        paddingTop: 80,
     },
     avatar: { 
         width: 100, 
@@ -464,13 +466,13 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.card, 
         borderRadius: 12, 
         marginBottom: 16, 
-        width: screenWidth / 2 - 24, // (lebar layar / 2) - (paddingWrapper / 2)
+        width: screenWidth / 2 - 24,
         overflow: 'hidden', 
     },
     productImagePlaceholder: { 
         width: '100%', 
         height: 120, 
-        backgroundColor: COLORS.background, // Latar belakang placeholder
+        backgroundColor: COLORS.background,
         justifyContent: 'center', 
         alignItems: 'center', 
     },
@@ -485,7 +487,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10, 
         marginTop: 8, 
         marginBottom: 4, 
-        height: 36, // Paksa 2 baris
+        height: 36,
     },
     productPrice: { 
         color: COLORS.cyan, 
@@ -501,13 +503,11 @@ const styles = StyleSheet.create({
         fontWeight: 'bold', 
         marginBottom: 8, 
     },
-    // Varian sectionTitle dengan margin horizontal & atas
     sectionTitleSpacing: { 
         marginHorizontal: 16, 
         marginTop: 24, 
         marginBottom: 16 
     },
-    // Varian sectionTitle untuk judul list produk
     productListTitle: { 
         marginHorizontal: 16, 
         marginBottom: 16, 
@@ -515,7 +515,6 @@ const styles = StyleSheet.create({
         color: COLORS.textPrimary, 
         fontWeight: '600', 
     },
-    // Teks untuk state kosong (tidak ada produk)
     noProductText: { 
         color: COLORS.textMuted, 
         textAlign: 'center', 

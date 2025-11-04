@@ -9,7 +9,7 @@ import { type NativeStackScreenProps } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { RootStackParamList } from '../navigation/types';
 import { COLORS } from '../config/theme';
-import { API_URL } from '../config/api';
+import { BASE_URL } from '../config/api';
 
 type SearchHistoryScreenProps = NativeStackScreenProps<RootStackParamList, 'SearchHistory'>;
 const SEARCH_HISTORY_KEY = '@search_history';
@@ -24,7 +24,7 @@ type ApiTrendingProduct = {
 // --- DIUBAH: Fungsi ini sekarang mengambil data dari API ---
 const getTrendingTerms = async (): Promise<string[]> => {
     try {
-        const response = await fetch(`${API_URL}/api/products/trending`);
+        const response = await fetch(`${BASE_URL}/api/products/trending`);
         if (!response.ok) {
             throw new Error(`Server error: ${response.status}`);
         }

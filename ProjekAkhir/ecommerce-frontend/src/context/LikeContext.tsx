@@ -1,6 +1,15 @@
-// src/context/LikeContext.tsx
-import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { 
+  createContext, 
+  useState, 
+  useEffect, 
+  useContext, 
+  ReactNode,
+  useCallback 
+} from 'react';
+import { Alert } from 'react-native';
+import apiClient from '../config/api';
+import { useAuth } from './AuthContext';
+import type { ApiProduct } from '../types';
 
 interface LikeContextType {
   likedIds: number[];
@@ -8,51 +17,59 @@ interface LikeContextType {
   isLoading: boolean;
 }
 
-const LIKE_STORAGE_KEY = 'likedProductIds';
-
 const LikeContext = createContext<LikeContextType | undefined>(undefined);
 
 export const LikeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [likedIds, setLikedIds] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { isLoggedIn } = useAuth();
 
-  // Load liked IDs from storage on mount
   useEffect(() => {
-    const loadLikedIds = async () => {
-      setIsLoading(true);
-      try {
-        const storedIdsString = await AsyncStorage.getItem(LIKE_STORAGE_KEY);
-        if (storedIdsString) {
-          setLikedIds(JSON.parse(storedIdsString));
+    const fetchLikes = async () => {
+      if (isLoggedIn) {
+        setIsLoading(true);
+        try {
+          // --- PERBAIKAN: Hapus '/api' ---
+          const response = await apiClient.get('/likes'); // DARI: '/api/likes'
+          
+          if (Array.isArray(response.data)) {
+            setLikedIds(response.data.map((product: ApiProduct) => product.id));
+          }
+        } catch (error) {
+          console.error("Gagal fetch likes:", error); // Ini yang muncul di screenshot
+        } finally {
+          setIsLoading(false);
         }
-      } catch (error) {
-        console.error("Failed to load liked IDs:", error);
-      } finally {
+      } else {
+        setLikedIds([]);
         setIsLoading(false);
       }
     };
-    loadLikedIds();
-  }, []);
+    fetchLikes();
+  }, [isLoggedIn]);
 
-  // Function to toggle like status and save to storage
-  const toggleLike = async (itemId: number) => {
-    let updatedIds: number[];
-    if (likedIds.includes(itemId)) {
-      updatedIds = likedIds.filter(id => id !== itemId); // Unlike
-    } else {
-      updatedIds = [...likedIds, itemId]; // Like
+  const toggleLike = useCallback(async (productId: number) => {
+    if (!isLoggedIn) {
+      Alert.alert("Login Diperlukan", "Anda harus login untuk menyukai barang.");
+      return;
     }
+
+    const isCurrentlyLiked = likedIds.includes(productId);
+    const optimisticLikedIds = isCurrentlyLiked
+      ? likedIds.filter(id => id !== productId)
+      : [...likedIds, productId];
+      
+    setLikedIds(optimisticLikedIds);
 
     try {
-      setLikedIds(updatedIds); // Update state first for immediate UI feedback
-      await AsyncStorage.setItem(LIKE_STORAGE_KEY, JSON.stringify(updatedIds));
+      // --- PERBAIKAN: Hapus '/api' ---
+      await apiClient.post('/likes', { productId }); // DARI: '/api/likes'
     } catch (error) {
-      console.error("Failed to save liked IDs:", error);
-      // Optional: Rollback state if saving fails
-      setLikedIds(likedIds);
-      throw error; // Re-throw error if needed
+      console.error("Failed to toggle like on API:", error);
+      setLikedIds(likedIds); // Rollback
+      Alert.alert("Error", "Gagal menyimpan perubahan. Silakan coba lagi.");
     }
-  };
+  }, [isLoggedIn, likedIds]);
 
   return (
     <LikeContext.Provider value={{ likedIds, toggleLike, isLoading }}>
@@ -61,7 +78,6 @@ export const LikeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   );
 };
 
-// Custom hook to use the context
 export const useLikes = () => {
   const context = useContext(LikeContext);
   if (!context) {

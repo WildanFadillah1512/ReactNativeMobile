@@ -1,25 +1,38 @@
-// File: src/context/AddressContext.tsx
-
 import React, {
   createContext,
   useState,
   useEffect,
   useContext,
   useCallback,
+  ReactNode,
 } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { Address } from '../types'; // ✅ Impor dari src/types.ts agar konsisten di semua file
+import { Alert } from 'react-native';
+// HAPUS: import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// --- 1. SESUAIKAN IMPOR TIPE ---
+// Impor dari file 'navigation/types.ts' yang sudah benar
+import type { Address } from '../navigation/types'; 
+
+// --- 2. IMPOR DEPENDENSI BARU ---
+import apiClient from '../config/api';
+import { useAuth } from './AuthContext'; // Untuk mengecek status login
 
 // ================================
 // 🧩 Tipe untuk Address Context
 // ================================
+
+// Tipe ini sekarang akan benar secara otomatis karena 'Address' di atas sudah benar
+type NewAddressData = Omit<Address, 'id' | 'createdAt' | 'userId' | 'isPrimary'>;
+
 interface AddressContextType {
   addresses: Address[];
-  addAddress: (address: Omit<Address, 'id'>) => Promise<void>;
-  updateAddress: (updatedAddress: Address) => Promise<void>;
+  addAddress: (addressData: NewAddressData) => Promise<boolean>; 
+  // --- 3. TAMBAHKAN KEMBALI 'updateAddress' ---
+  updateAddress: (id: number, addressData: NewAddressData) => Promise<boolean>;
   deleteAddress: (id: number) => Promise<void>;
   getAddressById: (id: number) => Address | undefined;
   loading: boolean;
+  refreshAddresses: () => Promise<void>; 
 }
 
 // ================================
@@ -27,146 +40,111 @@ interface AddressContextType {
 // ================================
 const AddressContext = createContext<AddressContextType | undefined>(undefined);
 
-const ADDRESS_STORAGE_KEY = 'userAddresses_v1'; // Gunakan versi jika struktur berubah
-
-// Data awal (opsional)
-const initialAddresses: Address[] = [
-  {
-    id: 1,
-    label: 'Rumah',
-    name: 'Budi Santoso',
-    phone: '(+62) 812-3456-7890',
-    fullAddress:
-      'Jl. Merdeka No. 45, RT 05/RW 02, Cilandak, Jakarta Selatan, 12430',
-    latitude: -6.295,
-    longitude: 106.78,
-  },
-];
-
-// ================================
-// 🏠 Provider Component
-// ================================
-export const AddressProvider: React.FC<{ children: React.ReactNode }> = ({
+export const AddressProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  const { isLoggedIn } = useAuth();
 
-  // ------------------------------
-  // 🔹 Load alamat dari AsyncStorage
-  // ------------------------------
-  useEffect(() => {
-    const loadAddresses = async () => {
+  // (Fungsi 'refreshAddresses' sudah benar)
+  const refreshAddresses = useCallback(async () => {
+    if (isLoggedIn) {
       setLoading(true);
       try {
-        const stored = await AsyncStorage.getItem(ADDRESS_STORAGE_KEY);
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed)) {
-            setAddresses(parsed);
-          } else {
-            console.warn('Invalid address data, resetting...');
-            setAddresses(initialAddresses);
-            await AsyncStorage.setItem(
-              ADDRESS_STORAGE_KEY,
-              JSON.stringify(initialAddresses)
-            );
-          }
-        } else {
-          // Jika kosong → pakai data awal
-          setAddresses(initialAddresses);
-          await AsyncStorage.setItem(
-            ADDRESS_STORAGE_KEY,
-            JSON.stringify(initialAddresses)
-          );
+        const response = await apiClient.get('/addresses');
+        if (Array.isArray(response.data)) {
+          setAddresses(response.data);
         }
       } catch (e) {
         console.error('Failed to load addresses:', e);
-        setAddresses(initialAddresses);
+        Alert.alert("Error", "Gagal memuat daftar alamat.");
       } finally {
         setLoading(false);
       }
-    };
-
-    loadAddresses();
-  }, []);
-
-  // ------------------------------
-  // 🔹 Simpan alamat ke AsyncStorage
-  // ------------------------------
-  const saveAddresses = async (updated: Address[]) => {
-    try {
-      await AsyncStorage.setItem(ADDRESS_STORAGE_KEY, JSON.stringify(updated));
-    } catch (e) {
-      console.error('Failed to save addresses:', e);
-      throw e;
+    } else {
+      setAddresses([]);
+      setLoading(false);
     }
-  };
+  }, [isLoggedIn]);
 
-  // ------------------------------
-  // ➕ Tambah alamat baru
-  // ------------------------------
-  const addAddress = async (newData: Omit<Address, 'id'>) => {
-    const newAddress: Address = {
-      id: Date.now(),
-      ...newData,
-      latitude: newData.latitude ?? 0,
-      longitude: newData.longitude ?? 0,
-    };
+  // (useEffect sudah benar)
+  useEffect(() => {
+    refreshAddresses();
+  }, [refreshAddresses]);
 
-    const updated = [...addresses, newAddress];
-    const previous = addresses;
+  // (Fungsi 'addAddress' sudah benar)
+  const addAddress = useCallback(async (newData: NewAddressData): Promise<boolean> => {
+    if (!isLoggedIn) {
+      Alert.alert("Login Diperlukan", "Anda harus login untuk menambah alamat.");
+      return false;
+    }
     try {
-      setAddresses(updated);
-      await saveAddresses(updated);
+      await apiClient.post('/addresses', newData);
+      await refreshAddresses(); 
+      return true;
     } catch (e) {
       console.error('Failed to save new address:', e);
-      setAddresses(previous);
+      Alert.alert("Error", "Gagal menyimpan alamat baru.");
+      return false;
     }
-  };
+  }, [isLoggedIn, refreshAddresses]);
 
-  // ------------------------------
-  // ✏️ Perbarui alamat
-  // ------------------------------
-  const updateAddress = async (updatedAddress: Address) => {
-    const updated = addresses.map((addr) =>
-      addr.id === updatedAddress.id ? updatedAddress : addr
+  // --- 4. TAMBAHKAN KEMBALI FUNGSI 'updateAddress' ---
+  const updateAddress = useCallback(async (id: number, newData: NewAddressData): Promise<boolean> => {
+    if (!isLoggedIn) {
+      Alert.alert("Login Diperlukan");
+      return false;
+    }
+    
+    // Optimistic Update: Perbarui state UI dulu
+    const previousAddresses = addresses;
+    setAddresses(prev => 
+      prev.map(addr => 
+        // Temukan alamat yg di-edit, ganti datanya dengan 'newData'
+        addr.id === id ? { ...addr, ...newData } : addr 
+      )
     );
-    const previous = addresses;
-    try {
-      setAddresses(updated);
-      await saveAddresses(updated);
-    } catch (e) {
-      console.error('Failed to update address:', e);
-      setAddresses(previous);
-    }
-  };
 
-  // ------------------------------
-  // ❌ Hapus alamat
-  // ------------------------------
-  const deleteAddress = async (id: number) => {
-    const updated = addresses.filter((addr) => addr.id !== id);
-    const previous = addresses;
     try {
-      setAddresses(updated);
-      await saveAddresses(updated);
+      // Panggil API (baseURL.../api + /addresses/123)
+      await apiClient.put(`/addresses/${id}`, newData);
+      return true; // Sukses
+      
+    } catch (error) {
+      console.error('Failed to update address:', error);
+      // Rollback jika API gagal
+      setAddresses(previousAddresses); 
+      Alert.alert("Error", "Gagal memperbarui alamat.");
+      return false; // Gagal
+    }
+  }, [isLoggedIn, addresses]); // Tambahkan 'addresses' sebagai dependensi
+
+  // (Fungsi 'deleteAddress' sudah benar)
+  const deleteAddress = useCallback(async (id: number) => {
+    if (!isLoggedIn) return;
+
+    const previousAddresses = addresses;
+    setAddresses(prev => prev.filter((addr) => addr.id !== id));
+
+    try {
+      await apiClient.delete(`/addresses/${id}`);
     } catch (e) {
       console.error('Failed to delete address:', e);
-      setAddresses(previous);
+      setAddresses(previousAddresses); 
+      Alert.alert("Error", "Gagal menghapus alamat.");
     }
-  };
+  }, [isLoggedIn, addresses]);
 
-  // ------------------------------
-  // 🔍 Ambil alamat berdasarkan ID
-  // ------------------------------
+  // (Fungsi 'getAddressById' sudah benar)
   const getAddressById = useCallback(
     (id: number): Address | undefined => {
       return addresses.find((addr) => addr.id === id);
     },
     [addresses]
   );
-
+  
   // ------------------------------
   // 🧾 Provider Value
   // ------------------------------
@@ -175,10 +153,11 @@ export const AddressProvider: React.FC<{ children: React.ReactNode }> = ({
       value={{
         addresses,
         addAddress,
-        updateAddress,
+        updateAddress, // <-- TAMBAHKAN INI
         deleteAddress,
         getAddressById,
         loading,
+        refreshAddresses,
       }}
     >
       {children}
@@ -189,10 +168,10 @@ export const AddressProvider: React.FC<{ children: React.ReactNode }> = ({
 // ================================
 // ⚡ Custom Hook untuk akses context
 // ================================
-export const useAddresses = () => {
+export const useAddress = () => {
   const context = useContext(AddressContext);
   if (context === undefined) {
-    throw new Error('useAddresses must be used within an AddressProvider');
+    throw new Error('useAddress must be used within an AddressProvider');
   }
   return context;
 };

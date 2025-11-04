@@ -15,9 +15,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { RootStackParamList } from '../navigation/types';
 import { useReviews} from '../context/ReviewContext';
-import type { Review } from '../types'; // Import UserReview juga
-
-// StarRating Component (Copy dari DetailScreen atau impor jika dipisah)
+import type { Review } from '../types';
 const StarRating = ({ rating }: { rating: number }) => (
  <View style={styles.starRatingContainer}>
   {Array.from({ length: 5 }).map((_, index) => (
@@ -37,7 +35,7 @@ type AllReviewsScreenProps = NativeStackScreenProps<RootStackParamList, 'AllRevi
 export default function AllReviewsScreen({ route, navigation }: AllReviewsScreenProps) {
   const { itemId, productName } = route.params;
   const { getReviewsForItem, loading } = useReviews();
-  const allItemReviews = getReviewsForItem(itemId); // Ambil semua ulasan
+  const allItemReviews = getReviewsForItem(itemId); 
 
   const renderReviewItem = ({ item }: { item: Review }) => (
     <View style={styles.reviewCard}>
@@ -69,7 +67,7 @@ export default function AllReviewsScreen({ route, navigation }: AllReviewsScreen
         </View>
       ) : (
         <FlatList
-          data={allItemReviews} // Tampilkan semua ulasan
+          data={allItemReviews} 
           renderItem={renderReviewItem}
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={styles.listContent}
@@ -92,9 +90,9 @@ const styles = StyleSheet.create({
   },
   backButton: { padding: 4, },
   headerTitle: { fontSize: 18, fontWeight: '600', color: 'white', flex: 1, textAlign: 'center', marginHorizontal: 10 },
-  headerSpacer: { width: 22 + 8 }, // Sesuaikan agar simetris
+  headerSpacer: { width: 22 + 8 }, 
   listContent: { padding: 16 },
-  centerContainer: { // Untuk loading dan empty state
+  centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',

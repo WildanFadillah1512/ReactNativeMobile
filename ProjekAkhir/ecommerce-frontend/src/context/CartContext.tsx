@@ -1,8 +1,23 @@
-import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { 
+  createContext, 
+  useState, 
+  useEffect, 
+  useContext, 
+  ReactNode,
+  useCallback 
+} from 'react';
+import { Alert } from 'react-native';
+import apiClient, { BASE_URL } from '../config/api'; // Impor apiClient & BASE_URL
+import { useAuth } from './AuthContext';
 import type { ApiProduct, CartEntry, CheckoutRentalItem } from '../types';
 import { formatCurrency } from '../utils/riceParse'; 
-import { API_URL } from '../config/api'; 
+
+// Tipe DbCartItem
+interface DbCartItem {
+  id: number;
+  duration: number;
+  product: ApiProduct;
+}
 
 interface CartContextType {
     cartEntries: CartEntry[]; 
@@ -16,189 +31,166 @@ interface CartContextType {
     getSelectedItemsForCheckout: () => CheckoutRentalItem[];
 }
 
-const CART_STORAGE_KEY = 'shoppingCartEntries_v1';
-
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [cartEntries, setCartEntries] = useState<CartEntry[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const { isLoggedIn } = useAuth();
+
     useEffect(() => {
         const loadCartEntries = async () => {
-            setIsLoading(true);
-            try {
-                const storedEntriesString = await AsyncStorage.getItem(CART_STORAGE_KEY);
-                if (storedEntriesString) {
-                    const loadedEntries: CartEntry[] = JSON.parse(storedEntriesString);
-                    if (Array.isArray(loadedEntries)) {
-                        const validatedEntries = loadedEntries.filter(entry =>
-                            entry?.item && // Cek null/undefined
-                            typeof entry.selected === 'boolean' &&
-                            typeof entry.duration === 'number' &&
-                            typeof entry.item.price === 'number' && 
-                            typeof entry.item.id === 'number' 
-                        ).map(entry => ({
-                            ...entry,
-                            duration: Math.max(1, entry.duration || 1)
-                        }));
-                        setCartEntries(validatedEntries);
-                    } else {
-                        console.warn("Invalid cart data structure found (not an array), resetting.");
-                        await AsyncStorage.removeItem(CART_STORAGE_KEY);
-                        setCartEntries([]);
-                    }
-                } else {
-                    setCartEntries([]);
-                }
-            } catch (error) {
-                console.error("Failed to load/parse cart entries:", error);
+            if (isLoggedIn) {
+                setIsLoading(true);
                 try {
-                    await AsyncStorage.removeItem(CART_STORAGE_KEY);
-                } catch (clearError) {
-                    console.error("Failed to clear corrupted cart storage:", clearError);
+                    // --- PERBAIKAN: Hapus '/api' ---
+                    const response = await apiClient.get('/cart'); // DARI: '/api/cart'
+                    
+                    if (Array.isArray(response.data)) {
+                        const loadedEntries: CartEntry[] = response.data.map((dbItem: DbCartItem) => ({
+                            item: dbItem.product,
+                            duration: dbItem.duration,
+                            selected: true
+                        }));
+                        setCartEntries(loadedEntries);
+                    }
+                } catch (error) {
+                    console.error("Gagal memuat keranjang:", error); // Ini yang muncul di screenshot
+                } finally {
+                    setIsLoading(false);
                 }
+            } else {
                 setCartEntries([]);
-            } finally {
                 setIsLoading(false);
             }
         };
         loadCartEntries();
-    }, []); 
-    const saveCartEntries = async (updatedEntries: CartEntry[]) => {
-        try {
-            await AsyncStorage.setItem(CART_STORAGE_KEY, JSON.stringify(updatedEntries));
-        } catch (error) {
-            console.error("Failed to save cart entries:", error);
-            throw error; 
-        }
-    };
-    const isInCart = (itemId: number): boolean => {
+    }, [isLoggedIn]);
+    
+    const isInCart = useCallback((itemId: number): boolean => {
         return cartEntries.some(entry => entry.item.id === itemId);
-    };
-    const addToCart = async (itemToAdd: ApiProduct): Promise<boolean> => {
+    }, [cartEntries]);
+
+    const addToCart = useCallback(async (itemToAdd: ApiProduct): Promise<boolean> => {
+        if (!isLoggedIn) {
+            Alert.alert("Login Diperlukan", "Anda harus login untuk menambah barang.");
+            return false;
+        }
         if (isInCart(itemToAdd.id)) {
             console.log('Item already in cart:', itemToAdd.name);
             return false; 
         }
-        const newEntry: CartEntry = {
-            item: itemToAdd, 
-            selected: true,  
-            duration: 1,  
-        };
-
-        const updatedCart = [...cartEntries, newEntry];
+        
+        const newEntry: CartEntry = { item: itemToAdd, selected: true, duration: 1 };
         const previousCart = cartEntries;
+        setCartEntries(prev => [...prev, newEntry]);
 
         try {
-            setCartEntries(updatedCart); 
-            await saveCartEntries(updatedCart); // Simpan ke AsyncStorage
-            return true; // Berhasil menambah
+            // --- PERBAIKAN: Hapus '/api' ---
+            await apiClient.post('/cart', { // DARI: '/api/cart'
+                productId: itemToAdd.id,
+                duration: 1 
+            });
+            return true;
         } catch (error) {
-            setCartEntries(previousCart); // Rollback state jika penyimpanan gagal
-            throw error; // Lempar error agar bisa ditangani di komponen pemanggil
+            console.error("Gagal menambah ke keranjang:", error);
+            setCartEntries(previousCart);
+            Alert.alert("Error", "Gagal menambah ke keranjang.");
+            return false;
         }
-    };
-    // --- AKHIR PERBAIKAN 4 ---
+    }, [isLoggedIn, isInCart, cartEntries]);
 
-    // Hapus item dari keranjang (Logika filter sudah benar)
-    const removeFromCart = async (itemIdToRemove: number) => {
+    const removeFromCart = useCallback(async (itemIdToRemove: number) => {
+        if (!isLoggedIn) return;
+        
+        const previousCart = cartEntries;
         const updatedCart = cartEntries.filter(entry => entry.item.id !== itemIdToRemove);
-        const previousCart = cartEntries;
-        try {
-            setCartEntries(updatedCart);
-            await saveCartEntries(updatedCart);
-        } catch (error) {
-            setCartEntries(previousCart); // Rollback
-            throw error;
-        }
-    };
+        setCartEntries(updatedCart);
 
-    // Kosongkan keranjang (Logika sudah benar)
-    const clearCart = async () => {
-        const previousCart = cartEntries;
         try {
-            setCartEntries([]);
-            await AsyncStorage.removeItem(CART_STORAGE_KEY); // Hapus juga dari storage
+            // --- PERBAIKAN: Hapus '/api' ---
+            await apiClient.delete(`/cart/${itemIdToRemove}`); // DARI: `/api/cart/${...}`
         } catch (error) {
-            setCartEntries(previousCart); // Rollback
-            throw error;
+            console.error("Gagal menghapus dari keranjang:", error);
+            setCartEntries(previousCart);
+            Alert.alert("Error", "Gagal menghapus item.");
         }
-    };
+    }, [isLoggedIn, cartEntries]);
 
-    // Mengubah status terpilih (centang) item (Logika map sudah benar)
-    const toggleItemSelection = async (itemId: number) => {
-        const updatedCart = cartEntries.map(entry =>
-            entry.item.id === itemId ? { ...entry, selected: !entry.selected } : entry
-        );
+    const clearCart = useCallback(async () => {
+        if (!isLoggedIn) return;
+
         const previousCart = cartEntries;
+        setCartEntries([]);
+        
         try {
-            setCartEntries(updatedCart);
-            await saveCartEntries(updatedCart);
+            // --- PERBAIKAN: Hapus '/api' ---
+            await apiClient.delete('/cart'); // DARI: '/api/cart'
         } catch (error) {
-            setCartEntries(previousCart); // Rollback
-            throw error;
+            console.error("Gagal mengosongkan keranjang:", error);
+            setCartEntries(previousCart);
+            Alert.alert("Error", "Gagal mengosongkan keranjang.");
         }
-    };
+    }, [isLoggedIn, cartEntries]);
 
-    // Mengubah durasi item di keranjang (Logika map & validasi sudah benar)
-    const updateItemDuration = async (itemId: number, duration: number) => {
-        const newDuration = Math.max(1, Math.floor(duration)); // Pastikan integer >= 1
+    const updateItemDuration = useCallback(async (itemId: number, duration: number) => {
+        if (!isLoggedIn) return;
+
+        const newDuration = Math.max(1, Math.floor(duration));
+        
+        const previousCart = cartEntries;
         const updatedCart = cartEntries.map(entry =>
             entry.item.id === itemId ? { ...entry, duration: newDuration } : entry
         );
-        const previousCart = cartEntries;
+        setCartEntries(updatedCart);
+
         try {
-            setCartEntries(updatedCart);
-            await saveCartEntries(updatedCart);
+            // --- PERBAIKAN: Hapus '/api' ---
+            await apiClient.post('/cart', { // DARI: '/api/cart'
+                productId: itemId,
+                duration: newDuration
+            });
         } catch (error) {
-            setCartEntries(previousCart); // Rollback
-            throw error;
+            console.error("Gagal update durasi:", error);
+            setCartEntries(previousCart);
+            Alert.alert("Error", "Gagal memperbarui durasi.");
         }
-    };
+    }, [isLoggedIn, cartEntries]);
 
-    // --- PERBAIKAN 5: Konversi Data di 'getSelectedItemsForCheckout' ---
-    // Fungsi ini bertindak sebagai "Adapter" antara data internal (ApiProduct)
-    // dan data yang dibutuhkan oleh CheckoutScreen (CheckoutRentalItem).
-    const getSelectedItemsForCheckout = (): CheckoutRentalItem[] => {
+    const toggleItemSelection = useCallback(async (itemId: number) => {
+        setCartEntries(prevCart => 
+            prevCart.map(entry =>
+                entry.item.id === itemId ? { ...entry, selected: !entry.selected } : entry
+            )
+        );
+    }, []);
+
+    const getSelectedItemsForCheckout = useCallback((): CheckoutRentalItem[] => {
         return cartEntries
-            .filter(entry => entry.selected) // 1. Filter item yang dipilih
-            .map(entry => {                 // 2. Ubah setiap CartEntry menjadi CheckoutRentalItem
-                const product = entry.item; // Ini adalah ApiProduct (data murni)
+            .filter(entry => entry.selected) 
+            .map(entry => {
+                const product = entry.item; 
+                
+                // Gunakan BASE_URL (http://...) untuk gambar, bukan apiClient.defaults.baseURL (.../api)
+                const imageUri = product.imageUrl 
+                    ? `${BASE_URL}/images/${product.imageUrl}` 
+                    : null;
 
-                // Buat objek CheckoutRentalItem (data terformat)
                 const checkoutItem: CheckoutRentalItem = {
-                    // Salin semua properti dasar dari ApiProduct
                     ...product,
-
-                    // --- Konversi/Format Properti yang Berbeda ---
-
-                    // Ubah 'price: number' menjadi 'price: string' terformat
                     price: formatCurrency(product.price),
-
-                    // Ubah 'imageUrl: string|null' menjadi 'image: ImageSourcePropType'
-                    image: product.imageUrl
-                        ? { uri: `${API_URL}/images/${product.imageUrl}` } // Buat URI jika ada
-                        : require('../assets/images/placeholder.png'), // Fallback ke placeholder jika null (Sesuaikan path!)
-
-                    // Tambahkan 'duration' dari CartEntry
+                    image: imageUri
+                        ? { uri: imageUri } 
+                        : require('../assets/images/placeholder.png'),
                     duration: entry.duration,
-
-                    // --- Pastikan Properti Lain Sesuai & Tangani Null ---
-                    // (Ini penting jika CheckoutRentalItem mewarisi dari RentalItem yang
-                    // mungkin tidak mengizinkan null untuk properti tertentu)
                     category: product.category ?? 'Lainnya',
                     location: product.location ?? 'Lokasi tidak diketahui',
-                    period: product.period ?? '', // Pastikan string, bukan null
-                    rating: product.rating ?? 0,   // Pastikan number, bukan null
-                    reviews: product.reviews ?? 0, // Pastikan number, bukan null
-
-                    // Pastikan properti seller juga ditangani jika API mengembalikan null
-                    // (CheckoutRentalItem mewarisi seller dari RentalItem -> ApiSeller)
+                    period: product.period ?? '', 
+                    rating: product.rating ?? 0,
+                    reviews: product.reviews ?? 0, 
                     seller: {
                         ...product.seller,
-                        // Ganti nilai null dari ApiSeller dengan default yang sesuai
-                        // jika CheckoutRentalItem/RentalItem tidak mengizinkan null
-                        avatar: product.seller.avatar ?? '', // Ganti null avatar dengan string kosong
+                        avatar: product.seller.avatar ?? '', 
                         bio: product.seller.bio ?? '',
                         rating: product.seller.rating ?? 0,
                         itemsRented: product.seller.itemsRented ?? 0,
@@ -206,28 +198,25 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 };
                 return checkoutItem;
             });
-    };
-    // --- AKHIR PERBAIKAN 5 ---
+    }, [cartEntries]);
 
-    // Memberikan state dan fungsi ke komponen anak
     return (
         <CartContext.Provider value={{
-            cartEntries, // State yang berisi CartEntry[] (dengan item: ApiProduct)
-            addToCart,   // Fungsi yang menerima ApiProduct
+            cartEntries, 
+            addToCart, 
             removeFromCart,
             isInCart,
             clearCart,
             isLoading,
             toggleItemSelection,
             updateItemDuration,
-            getSelectedItemsForCheckout // Fungsi yang mengembalikan CheckoutRentalItem[] (terformat)
+            getSelectedItemsForCheckout 
         }}>
             {children}
         </CartContext.Provider>
     );
 };
 
-// Custom hook untuk menggunakan context (Sudah Benar)
 export const useCart = () => {
     const context = useContext(CartContext);
     if (!context) {

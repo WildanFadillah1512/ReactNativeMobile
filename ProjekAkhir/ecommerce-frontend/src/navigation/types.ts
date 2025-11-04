@@ -1,73 +1,86 @@
-// File: src/navigation/types.ts
-// Ini adalah satu-satunya tempat untuk mendefinisikan tipe navigasi Anda.
-
-// Impor tipe-tipe dasar navigasi
-import type { RouteProp } from '@react-navigation/native';
+import type { RouteProp, NavigatorScreenParams } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-// Impor tipe-tipe yang dibutuhkan oleh parameter navigasi
-// (Tipe-tipe ini sekarang diimpor di sini, bukan di App.tsx)
-import type { Address, ApiSeller, CheckoutRentalItem } from '../types';
+// --- 1. SESUAIKAN IMPOR ---
+// Hapus 'Address' dari sini, karena kita akan definisikan di bawah
+import type { ApiSeller, CheckoutRentalItem } from '../types'; 
 
-// ===================================================================
-// 1. Definisi Root Stack Param List (Dipindahkan dari App.tsx)
-// ===================================================================
-export type RootStackParamList = {
-    Home: {
-        activeTabId?: 'home' | 'explore' | 'profile' | 'saved'; // Sesuaikan tab
-    } | undefined;
-
-    // 'Detail' sekarang HANYA menerima 'productId' (angka).
-    Detail: {
-        productId: number;
-    };
-
-    // Produk & checkout (Menggunakan CheckoutRentalItem - Tipe terformat)
-    Checkout: {
-        items: CheckoutRentalItem[];
-        selectedAddressId?: number;
-    };
-    Address: {
-        currentAddressId?: number;
-        items: CheckoutRentalItem[]; // Butuh 'items' untuk kembali ke Checkout
-    };
-    Success: undefined;
-
-    // Manajemen alamat (Menggunakan Address)
-    AddAddress: undefined;
-    EditAddress: { address: Address };
-
-    // Chat & profil seller
-    Chat: {
-        sellerId: number;
-        sellerName: string;
-        itemId?: number;
-        sellerAvatar?: string | null; // <-- FIX: Sesuai dengan ApiSeller (bisa null)
-    };
-
-    // 'SellerProfile' sekarang menerima 'ApiSeller' (tipe baru dari API).
-    SellerProfile: { seller: ApiSeller }; // <-- FIX: Menggunakan ApiSeller
-
-    // Review, favorit, keranjang
-    AllReviews: { itemId: number; productName: string };
-    Saved: undefined;
-    Cart: undefined;
-
-    // Pencarian
-    SearchHistory: undefined;
-    SearchResults: { query: string };
-
-    // Notifikasi
-    Notifications: undefined;
+// --- 2. DEFINISIKAN TIPE 'ADDRESS' BARU ---
+// Tipe ini sekarang cocok dengan schema.prisma dan API backend Anda
+export type Address = {
+  id: number;
+  label: string;
+  receiverName: string;
+  phone: string;
+  street: string;
+  city: string;
+  province: string;
+  postalCode: string;
+  isPrimary: boolean;
+  createdAt: string; // Prisma mengembalikan DateTime sebagai string ISO
+  userId: number;
 };
 
-// ===================================================================
-// 2. Tipe Helper (Juga dipindahkan dari App.tsx)
-// ===================================================================
-// Tipe ini akan Anda impor di setiap screen untuk hook useNavigation dan useRoute
+// --- 3. Tipe Bottom Tab Navigator (Sudah Benar) ---
+export type MainTabParamList = {
+  Home: undefined;
+  Explore: undefined;
+  Notifications: undefined;
+  Profile: undefined;
+};
 
-export type RootStackNavigationProp<T extends keyof RootStackParamList = 'Home'> = 
-  NativeStackNavigationProp<RootStackParamList, T>;
-  
-export type RootStackRouteProp<T extends keyof RootStackParamList> = 
-  RouteProp<RootStackParamList, T>;
+// --- 4. Tipe Root Stack Navigator (Disesuaikan) ---
+export type RootStackParamList = {
+  // --- LAYAR AUTENTIKASI ---
+  Login: undefined;
+  Register: undefined;
+
+  // --- LAYAR MAIN APP (BERISI TAB) ---
+  Main: NavigatorScreenParams<MainTabParamList>; 
+
+  // --- LAYAR STACK LAINNYA ---
+  Detail: {
+    productId: number;
+  };
+  Checkout: {
+    items: CheckoutRentalItem[];
+    selectedAddressId?: number;
+  };
+  Address: {
+    currentAddressId?: number;
+    // 'items' dibuat opsional (?) karena tidak selalu dikirim
+    // (misal, saat navigasi dari ProfileScreen)
+    items?: CheckoutRentalItem[]; 
+  };
+  Success: undefined;
+
+  AddAddress: undefined;
+  EditAddress: { 
+    // 'address' sekarang menggunakan tipe 'Address' baru yang kita definisikan di atas
+    address: Address 
+  };
+  Chat: {
+    sellerId: number;
+    sellerName: string;
+    itemId?: number;
+    sellerAvatar?: string | null;
+  };
+  SellerProfile: { seller: ApiSeller };
+  AllReviews: { itemId: number; productName: string };
+  Saved: undefined;
+  Cart: undefined;
+  SearchHistory: undefined;
+  SearchResults: { query: string };
+};
+
+
+// --- Tipe Helper (Sudah Benar) ---
+export type RootStackNavigationProp<
+  T extends keyof RootStackParamList = 'Main', 
+> = NativeStackNavigationProp<RootStackParamList, T>;
+
+export type RootStackRouteProp<T extends keyof RootStackParamList> = RouteProp<
+  RootStackParamList,
+  T
+>;
+

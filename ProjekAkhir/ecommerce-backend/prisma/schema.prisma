@@ -1,50 +1,131 @@
+// Mendefinisikan generator client. Ini memberitahu Prisma untuk
+// menghasilkan Prisma Client berbasis JavaScript/TypeScript.
 generator client {
   provider = "prisma-client-js"
 }
 
+// Mendefinisikan koneksi database Anda.
+// Di sini Anda menggunakan PostgreSQL.
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// === ENUM & MODEL APLIKASI ===
+
+// Enum untuk Role (Admin / Penyewa)
+enum Role {
+  PENYEWA
+  ADMIN
+}
+
+// Model untuk Pengguna (Customer)
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String   // Disimpan dalam bentuk hash (hasil bcrypt)
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // --- RELASI YANG SUDAH ADA ---
+  role      Role           @default(PENYEWA)
+  saved     SavedProduct[]
+  cart      CartItem[]
+
+  // --- TAMBAHAN UNTUK ALAMAT ---
+  addresses Address[]
+}
+
+// Model untuk Penjual (Seller/Toko)
+model Seller {
+  id          Int      @id // ID diisi manual, bukan auto-increment.
+  name        String
+  avatar      String?
+  bio         String?
+  rating      Float?
+  itemsRented Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relasi: Satu Seller bisa memiliki BANYAK Produk
+  products    Product[]
 }
 
 // Model untuk Produk
 model Product {
   id          Int      @id @default(autoincrement())
   name        String
-  price       Float    // Kita akan ubah 'Rp 50.000' jadi 50000
+  price       Float
   description String
   imageUrl    String?
-  category    String?  // Saya tambahkan dari data Anda
-  rating      Float?   // Saya tambahkan dari data Anda
-  reviews     Int?     // Saya tambahkan dari data Anda
-  trending    Boolean  @default(false) // Saya tambahkan dari data Anda
-  location    String?  // Saya tambahkan dari data Anda
-  period      String?  // Saya tambahkan dari data Anda
+  category    String?
+  rating      Float?   // Nanti kita akan ganti ini saat membuat fitur Ulasan
+  reviews     Int?     // Nanti kita akan ganti ini
+  trending    Boolean  @default(false)
+  location    String?
+  period      String?
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  // --- Relasi ke Seller ---
-  sellerId Int
-  seller   Seller @relation(fields: [sellerId], references: [id])
+  // Relasi: Banyak Produk dimiliki oleh SATU Seller
+  sellerId    Int
+  seller      Seller   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  // --- RELASI YANG SUDAH ADA ---
+  likedBy     SavedProduct[]
+  inCart      CartItem[]
 }
 
-// Model untuk User (Belum kita pakai, tapi tidak apa-apa)
-model User {
+
+// --- MODEL UNTUK FITUR "LIKES" ---
+model SavedProduct {
   id        Int      @id @default(autoincrement())
-  email     String   @unique
-  password  String
-  name      String?
   createdAt DateTime @default(now())
+
+  // Relasi ke User
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int
+  
+  // Relasi ke Product
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId Int
+  
+  @@unique([userId, productId]) 
 }
 
-// --- MODEL BARU UNTUK SELLER ---
-model Seller {
-  id           Int      @id // Kita akan pakai ID dari data Anda (101, 102, dll)
-  name         String
-  avatar       String?
-  bio          String?
-  rating       Float?
-  itemsRented  Int?
+// --- MODEL UNTUK FITUR "KERANJANG" ---
+model CartItem {
+  id        Int      @id @default(autoincrement())
+  duration  Int      @default(1)
+
+  // Relasi ke User
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int
   
-  // Relasi: Satu Seller punya BANYAK Produk
-  products     Product[]
+  // Relasi ke Product
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId Int
+  
+  @@unique([userId, productId])
+}
+
+
+// --- TAMBAHAN UNTUK ALAMAT ---
+// Model baru untuk menyimpan alamat pengiriman per-user
+model Address {
+  id           Int      @id @default(autoincrement())
+  label        String   // Mis: "Rumah", "Kantor"
+  receiverName String   // Nama penerima
+  phone        String   // Nomor HP penerima
+  street       String   // Nama jalan, nomor
+  city         String
+  province     String   // Provinsi
+  postalCode   String
+  isPrimary    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  // Relasi: Alamat ini dimiliki oleh SATU user
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       Int
 }

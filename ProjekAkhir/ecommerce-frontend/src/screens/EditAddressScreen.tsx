@@ -1,5 +1,3 @@
-// File: src/screens/EditAddressScreen.tsx
-
 import React, { useState } from 'react';
 import {
   View,
@@ -9,19 +7,36 @@ import {
   ScrollView,
   TextInput,
   Alert,
+  SafeAreaView,
+  ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import { RootStackParamList } from '../../App';
-import { useAddresses } from '../context/AddressContext';
-import type { Address } from '../types'; // ✅ gunakan tipe global yang konsisten
+// --- 1. Impor tipe dari 'navigation/types' ---
+import { RootStackParamList } from '../navigation/types'; 
+import { useAddress } from '../context/AddressContext';
+import { COLORS } from '../config/theme';
 
 type EditAddressScreenProps = NativeStackScreenProps<
   RootStackParamList,
   'EditAddress'
 >;
+
+// Komponen Input Kustom (agar rapi)
+const FormInput = ({ label, value, onChangeText, placeholder, ...props }: any) => (
+  <View style={styles.inputGroup}>
+    <Text style={styles.inputLabel}>{label}</Text>
+    <TextInput
+      style={styles.input}
+      value={value}
+      onChangeText={onChangeText}
+      placeholder={placeholder}
+      placeholderTextColor={COLORS.textMuted}
+      {...props}
+    />
+  </View>
+);
 
 export default function EditAddressScreen({
   route,
@@ -30,106 +45,137 @@ export default function EditAddressScreen({
   // Ambil alamat yang akan diedit dari parameter navigasi
   const { address } = route.params;
 
-  // State untuk setiap field
+  // --- 2. Panggil hook 'useAddress' ---
+  const { updateAddress } = useAddress();
+  const [isLoading, setIsLoading] = useState(false);
+
+  // --- 3. Sesuaikan State dengan schema.prisma ---
+  // Kita isi state awal dengan data 'address' dari route.params
   const [label, setLabel] = useState(address.label);
-  const [name, setName] = useState(address.name);
+  const [receiverName, setReceiverName] = useState(address.receiverName);
   const [phone, setPhone] = useState(address.phone);
-  const [fullAddress, setFullAddress] = useState(address.fullAddress);
+  const [street, setStreet] = useState(address.street);
+  const [city, setCity] = useState(address.city);
+  const [province, setProvince] = useState(address.province);
+  const [postalCode, setPostalCode] = useState(address.postalCode);
 
-  const { updateAddress } = useAddresses();
-
-  const handleSaveChanges = async () => {
-    if (!label.trim() || !name.trim() || !phone.trim() || !fullAddress.trim()) {
-      Alert.alert('Form Tidak Lengkap', 'Mohon isi semua kolom yang tersedia.');
-      return;
+  const validateForm = () => {
+    if (!label || !receiverName || !phone || !street || !city || !province || !postalCode) {
+      Alert.alert("Form Tidak Lengkap", "Mohon isi semua field yang diperlukan.");
+      return false;
     }
+    return true;
+  };
 
-    // ✅ Buat objek alamat baru dengan tipe lengkap
-    const updatedAddress: Address = {
-      id: address.id,
+  // --- 4. Sesuaikan fungsi 'handleSaveChanges' ---
+  const handleSaveChanges = async () => {
+    if (!validateForm() || isLoading) return;
+
+    setIsLoading(true);
+
+    // Buat objek baru (bertipe NewAddressData)
+    const updatedData = {
       label,
-      name,
+      receiverName,
       phone,
-      fullAddress,
-      latitude: address.latitude ?? 0,
-      longitude: address.longitude ?? 0,
+      street,
+      city,
+      province,
+      postalCode,
+      // Properti di bawah ini tidak ada di NewAddressData, jadi jangan dikirim
+      // name: '', 
+      // fullAddress: '', 
     };
 
     try {
-      await updateAddress(updatedAddress);
-      Alert.alert('Berhasil', 'Perubahan alamat telah disimpan.', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
+      // Panggil 'updateAddress' dari context dengan ID dan data baru
+      const success = await updateAddress(address.id, updatedData);
+      
+      if (success) {
+        Alert.alert("Berhasil", "Perubahan alamat telah disimpan.", [
+          { text: 'OK', onPress: () => navigation.goBack() },
+        ]);
+      }
+      // Jika gagal, context akan otomatis menampilkan Alert error
+      
     } catch (error) {
       console.error('Gagal memperbarui alamat:', error);
       Alert.alert(
         'Gagal',
         'Terjadi kesalahan saat menyimpan perubahan. Coba lagi.'
       );
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Icon name="arrow-left" size={24} color="white" />
+          <Icon name="arrow-left" size={20} color={COLORS.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Alamat</Text>
         <View style={styles.headerSpacer} />
       </View>
 
-      {/* Scrollable Form */}
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.inputLabel}>
-          Label Alamat (Contoh: Rumah, Kantor)
-        </Text>
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder="Label Alamat"
-            placeholderTextColor="#94a3b8"
+      {/* --- 5. Sesuaikan Form Input --- */}
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <Text style={styles.sectionTitle}>Info Kontak</Text>
+        <View style={styles.card}>
+          <FormInput
+            label="Label Alamat"
             value={label}
             onChangeText={setLabel}
+            placeholder="Contoh: Rumah, Kantor"
           />
-        </View>
-
-        <Text style={styles.inputLabel}>Nama Penerima</Text>
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder="Nama Lengkap"
-            placeholderTextColor="#94a3b8"
-            value={name}
-            onChangeText={setName}
+          <FormInput
+            label="Nama Penerima"
+            value={receiverName}
+            onChangeText={setReceiverName}
+            placeholder="Nama Lengkap Penerima"
           />
-        </View>
-
-        <Text style={styles.inputLabel}>Nomor Telepon</Text>
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder="Nomor Telepon Aktif"
-            placeholderTextColor="#94a3b8"
-            keyboardType="phone-pad"
+          <FormInput
+            label="Nomor HP"
             value={phone}
             onChangeText={setPhone}
+            placeholder="0812..."
+            keyboardType="phone-pad"
           />
         </View>
 
-        <Text style={styles.inputLabel}>Alamat Lengkap</Text>
-        <View style={[styles.inputContainer, styles.textAreaContainer]}>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            placeholder="Jalan, Nomor Rumah, RT/RW, Kelurahan, Kecamatan, Kota, Kode Pos"
-            placeholderTextColor="#94a3b8"
+        <Text style={styles.sectionTitle}>Detail Alamat</Text>
+        <View style={styles.card}>
+          <FormInput
+            label="Jalan"
+            value={street}
+            onChangeText={setStreet}
+            placeholder="Nama jalan, nomor rumah, RT/RW"
             multiline
-            value={fullAddress}
-            onChangeText={setFullAddress}
+          />
+          <FormInput
+            label="Kota/Kabupaten"
+            value={city}
+            onChangeText={setCity}
+            placeholder="Contoh: Jakarta Selatan"
+          />
+          <FormInput
+            label="Provinsi"
+            value={province}
+            onChangeText={setProvince}
+            placeholder="Contoh: DKI Jakarta"
+          />
+          <FormInput
+            label="Kode Pos"
+            value={postalCode}
+            onChangeText={setPostalCode}
+            placeholder="12345"
+            keyboardType="number-pad"
+            maxLength={5}
           />
         </View>
       </ScrollView>
@@ -137,69 +183,64 @@ export default function EditAddressScreen({
       {/* Tombol Simpan */}
       <View style={styles.footer}>
         <TouchableOpacity
-          style={styles.confirmButton}
+          style={[styles.saveButton, isLoading && styles.saveButtonDisabled]} 
           onPress={handleSaveChanges}
+          disabled={isLoading}
         >
-          <Text style={styles.confirmButtonText}>Simpan Perubahan</Text>
+          {isLoading ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text style={styles.saveButtonText}>Simpan Perubahan</Text>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 }
 
-// ============================
-// 🎨 STYLES
-// ============================
+// --- 6. Ganti Stylesheet (dari AddAddressScreen) ---
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f172a' },
+  container: { flex: 1, backgroundColor: COLORS.background },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderColor: '#1e293b',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
   },
-  backButton: { width: 40, height: 40, justifyContent: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: 'white' },
+  backButton: { width: 40 },
+  headerTitle: { fontSize: 18, fontWeight: '600', color: COLORS.textPrimary },
   headerSpacer: { width: 40 },
-  scrollContent: { padding: 16 },
-  inputLabel: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    marginBottom: 8,
-  },
-  inputContainer: {
-    backgroundColor: '#1e293b',
-    borderRadius: 8,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  textAreaContainer: {
-    height: 120,
-  },
+  scrollContainer: { padding: 16, paddingBottom: 100 },
+  sectionTitle: { fontSize: 16, fontWeight: '600', color: COLORS.textPrimary, marginBottom: 12 },
+  card: { backgroundColor: COLORS.card, borderRadius: 12, padding: 16, marginBottom: 24 },
+  inputGroup: { marginBottom: 16 },
+  inputLabel: { fontSize: 14, color: COLORS.textSecondary, marginBottom: 8, fontWeight: '500' },
   input: {
-    color: 'white',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 14,
-  },
-  textArea: {
-    height: 120,
-    textAlignVertical: 'top',
-    paddingTop: 12,
+    backgroundColor: COLORS.background,
+    borderColor: COLORS.border,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    color: COLORS.textPrimary,
   },
   footer: {
+    backgroundColor: COLORS.card,
     padding: 16,
+    paddingBottom: 24, // Beri jarak lebih untuk safe area
     borderTopWidth: 1,
-    borderColor: '#1e293b',
+    borderColor: COLORS.border,
   },
-  confirmButton: {
-    backgroundColor: '#06b6d4',
-    padding: 16,
+  saveButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
   },
-  confirmButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
+  saveButtonDisabled: { backgroundColor: COLORS.textMuted },
+  saveButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });
