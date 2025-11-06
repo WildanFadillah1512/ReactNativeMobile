@@ -5,6 +5,7 @@ import {
     FlatList,
     Modal, Pressable, TextInput,
     ActivityIndicator,
+    Alert, // <-- 1. TAMBAHKAN Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome';
@@ -12,16 +13,16 @@ import { useRoute, type RouteProp, useNavigation } from '@react-navigation/nativ
 import type { RootStackParamList, RootStackNavigationProp } from '../navigation/types';
 import type { ApiProduct, ApiSeller } from '../types';
 import { COLORS } from '../config/theme';
-import { BASE_URL } from '../config/api';
+// --- 2. IMPOR apiClient ---
+import apiClient, { BASE_URL } from '../config/api';
 
-
+// (Helper: SORT_OPTIONS, RATING_OPTIONS, buildImageUri, formatPrice, getCategoryInfo, formatToRupiah, parseRupiah SUDAH BENAR)
 const SORT_OPTIONS: { id: SortOptionId; label: string }[] = [
     { id: 'relevan', label: 'Paling Relevan' },
     { id: 'hargaAsc', label: 'Harga Terendah' },
     { id: 'hargaDesc', label: 'Harga Tertinggi' },
     { id: 'ratingDesc', label: 'Rating Tertinggi' },
 ];
-
 const RATING_OPTIONS = [4, 3, 2, 1];
 const buildImageUri = (filename?: string | null): string | null => {
     if (!filename) return null;
@@ -30,12 +31,10 @@ const buildImageUri = (filename?: string | null): string | null => {
     }
     return `${BASE_URL}/images/${filename}`;
 };
-
 const formatPrice = (price: number): string => {
     if (isNaN(price)) return '0';
     return price.toLocaleString('id-ID');
 };
-
 const getCategoryInfo = (cat: string | null) => {
     switch (cat) {
         case 'Outdoor': return { icon: 'tree', color: '#14b8a6' };
@@ -45,7 +44,6 @@ const getCategoryInfo = (cat: string | null) => {
         default: return { icon: 'tag', color: COLORS.textSecondary };
     }
 };
-
 const formatToRupiah = (angka: string | number): string => {
     const numStr = String(angka).replace(/[^0-9]/g, '');
     if (!numStr) return '';
@@ -53,7 +51,6 @@ const formatToRupiah = (angka: string | number): string => {
     if (isNaN(num)) return '';
     return 'Rp ' + num.toLocaleString('id-ID');
 };
-
 const parseRupiah = (rupiah: string): number | null => {
     const numStr = rupiah.replace(/[^0-9]/g, '');
     if (!numStr) return null;
@@ -68,17 +65,29 @@ type SearchResultsRouteProp = RouteProp<RootStackParamList, 'SearchResults'>;
 type SortOptionId = 'relevan' | 'hargaAsc' | 'hargaDesc' | 'ratingDesc';
 
 // ================================================================
+// 🧩 INTERNAL TYPES
+// ================================================================
+// --- 3. HAPUS TIPE 'ExtendedProduct' (Tidak perlu lagi) ---
+// Tipe 'ApiProduct' dari '../types' sudah memiliki 'ratingAvg' & 'reviewsCount'
+
+// ================================================================
 // 🧩 KOMPONEN-KOMPONEN KECIL (PRESENTATIONAL)
 // ================================================================
 
 // ----------------------------------------------------------------
 // Komponen Kartu Produk
 // ----------------------------------------------------------------
+// --- 4. GANTI 'ExtendedProduct' MENJADI 'ApiProduct' ---
 type ProductCardProps = { item: ApiProduct; onPress: () => void };
 const ProductCard: React.FC<ProductCardProps> = React.memo(({ item, onPress }) => {
     const { icon, color } = getCategoryInfo(item.category);
     const imageUrl = buildImageUri(item.imageUrl);
-    
+
+    // --- 5. PERBAIKI LOGIKA RATING & REVIEW ---
+    // Gunakan 'ratingAvg' & 'reviewsCount' langsung dari 'ApiProduct'
+    const displayRating = item.ratingAvg ?? null;
+    const displayCount = item.reviewsCount ?? null;
+
     return (
         <TouchableOpacity style={styles.productCardContainer} onPress={onPress} activeOpacity={0.8}>
             {imageUrl ? (
@@ -113,7 +122,12 @@ const ProductCard: React.FC<ProductCardProps> = React.memo(({ item, onPress }) =
                     </Text>
                     <View style={styles.ratingBox}>
                         <Icon name="star" size={10} color={COLORS.starActive} />
-                        <Text style={styles.ratingText}>{item.rating?.toFixed(1) || 'N/A'}</Text>
+                        <Text style={styles.ratingText}>
+                            {displayRating !== null ? (displayRating).toFixed(1) : 'Baru'}
+                        </Text>
+                        <Text style={styles.reviewCountText}>
+                            {displayCount !== null ? ` (${displayCount})` : ''}
+                        </Text>
                     </View>
                 </View>
             </View>
@@ -122,7 +136,7 @@ const ProductCard: React.FC<ProductCardProps> = React.memo(({ item, onPress }) =
 });
 
 // ----------------------------------------------------------------
-// Komponen Kartu Toko
+// Komponen Kartu Toko (Sudah Benar)
 // ----------------------------------------------------------------
 type ShopCardProps = { shop: ApiSeller; onPress: () => void };
 const ShopCard: React.FC<ShopCardProps> = React.memo(({ shop, onPress }) => {
@@ -133,7 +147,7 @@ const ShopCard: React.FC<ShopCardProps> = React.memo(({ shop, onPress }) => {
              <Image 
                 source={avatarUrl ? { uri: avatarUrl } : require('../assets/images/avatar-placeholder.png')} 
                 style={styles.shopLogo} 
-            />
+             />
              <View style={styles.shopInfoContainer}>
                  <Text style={styles.shopName}>{shop.name}</Text>
                  <Text style={styles.shopBio} numberOfLines={2}>{shop.bio || 'Tidak ada bio.'}</Text>
@@ -154,7 +168,7 @@ const ShopCard: React.FC<ShopCardProps> = React.memo(({ shop, onPress }) => {
 });
 
 // ----------------------------------------------------------------
-// Komponen No Results
+// Komponen No Results (Sudah Benar)
 // ----------------------------------------------------------------
 const NoResultsView: React.FC<{ query: string }> = ({ query }) => {
     return (
@@ -167,7 +181,7 @@ const NoResultsView: React.FC<{ query: string }> = ({ query }) => {
 };
 
 // ----------------------------------------------------------------
-// Komponen Header
+// Komponen Header (Sudah Benar)
 // ----------------------------------------------------------------
 type SearchHeaderProps = {
     query: string;
@@ -239,7 +253,7 @@ const SearchResultsHeader: React.FC<SearchHeaderProps> = React.memo(({
 });
 
 // ----------------------------------------------------------------
-// Komponen Modal Urutkan
+// Komponen Modal Urutkan (Sudah Benar)
 // ----------------------------------------------------------------
 type SortModalProps = {
     visible: boolean;
@@ -272,12 +286,12 @@ const SortModal: React.FC<SortModalProps> = React.memo(({ visible, onClose, sele
                      />
                  </View>
              </Pressable>
-           </Modal>
+          </Modal>
     );
 });
 
 // ----------------------------------------------------------------
-// Komponen Modal Filter
+// Komponen Modal Filter (Sudah Benar)
 // ----------------------------------------------------------------
 type FilterModalProps = {
     visible: boolean;
@@ -332,7 +346,7 @@ const FilterModal: React.FC<FilterModalProps> = React.memo(({
                         <View style={styles.chipContainer}>
                             {availableLocations.map(l => { const s = tempState.locations.includes(l); return (
                                 <TouchableOpacity key={l} style={[styles.chip, s && styles.chipActive]} onPress={() => onTempStateChange.toggleLocation(l)}>
-                                <Text style={[styles.chipText, s && styles.chipTextActive]}>{l}</Text>
+                                    <Text style={[styles.chipText, s && styles.chipTextActive]}>{l}</Text>
                                 </TouchableOpacity>
                             );})}
                         </View>
@@ -382,10 +396,10 @@ export default function SearchResultsScreen() {
     // --- State ---
     const [searchQuery, setSearchQuery] = useState(route.params.query);
     const [submittedQuery, setSubmittedQuery] = useState(route.params.query);
-
     const [activeTab, setActiveTab] = useState<'produk' | 'toko'>('produk');
     
     // Data state
+    // --- 6. GANTI 'ExtendedProduct' MENJADI 'ApiProduct' ---
     const [allProducts, setAllProducts] = useState<ApiProduct[]>([]);
     const [allSellers, setAllSellers] = useState<ApiSeller[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -412,33 +426,37 @@ export default function SearchResultsScreen() {
     const [appliedMaxPrice, setAppliedMaxPrice] = useState<number | null>(null);
     const [appliedMinRating, setAppliedMinRating] = useState<number | null>(null);
 
-    // --- Data Fetching ---
+    // --- 7. SESUAIKAN DATA FETCHING (HAPUS LOGIKA MANUAL RATING) ---
     useEffect(() => {
         const fetchData = async () => {
             setIsLoading(true);
             setError(null);
             try {
-                // Ganti '/api/products' dengan endpoint pencarian Anda jika ada
-                // Untuk sekarang, kita filter di client side
-                const response = await fetch(`${BASE_URL}/api/products`);
-                if (!response.ok) {
-                    throw new Error(`Server responded with status ${response.status}`);
-                }
-                const data: ApiProduct[] = await response.json();
-                setAllProducts(data);
+                // Ganti 'fetch' dengan 'apiClient'
+                const response = await apiClient.get('/products');
+                
+                const products: ApiProduct[] = response.data;
+                // 'products' sudah berisi 'ratingAvg' dan 'reviewsCount' dari API
+                setAllProducts(products);
 
-                // Ekstrak seller unik
+                // Ekstrak seller unik (Logika ini sudah benar)
                 const sellerMap = new Map<number, ApiSeller>();
-                data.forEach(p => {
+                products.forEach(p => {
                     if (p.seller && !sellerMap.has(p.seller.id)) {
                         sellerMap.set(p.seller.id, p.seller);
                     }
                 });
                 setAllSellers(Array.from(sellerMap.values()));
 
-            } catch (err) {
+            } catch (err: any) { // <-- Tipe 'err' sebagai 'any'
                 console.error("Failed to fetch data:", err);
-                const message = err instanceof Error ? err.message : "Gagal memuat data. Periksa koneksi.";
+                const message = err.response?.data?.message || err.message || "Gagal memuat data.";
+                // Tampilkan Alert jika ada error
+                if (err.code === 'ERR_NETWORK') {
+                    Alert.alert("Error Koneksi", `Tidak dapat terhubung ke server.\nPastikan server backend (${BASE_URL}) berjalan.`);
+                } else {
+                    Alert.alert("Error Memuat Data", message);
+                }
                 setError(message);
             } finally {
                 setIsLoading(false);
@@ -448,9 +466,9 @@ export default function SearchResultsScreen() {
     }, []); // Hanya fetch sekali saat mount
 
     // --- Memoized Logic (Filtering & Sorting) ---
+    // (availableCategories, availableLocations, overallMinPrice/MaxPrice sudah benar)
     const availableCategories = useMemo(() => Array.from(new Set(allProducts.map(p => p.category).filter(Boolean) as string[])), [allProducts]);
     const availableLocations = useMemo(() => Array.from(new Set(allProducts.map(p => p.location).filter(Boolean) as string[])), [allProducts]);
-    
     const { overallMinPrice, overallMaxPrice } = useMemo(() => {
         if (allProducts.length === 0) return { overallMinPrice: 0, overallMaxPrice: 0 };
         const prices = allProducts.map(p => p.price);
@@ -458,13 +476,13 @@ export default function SearchResultsScreen() {
         return { overallMinPrice: Math.min(...prices), overallMaxPrice: Math.max(...prices) };
     }, [allProducts]);
 
-    // 1. Filter by query
+    // 1. Filter by query (Sudah Benar)
     const queryFilteredResults = useMemo(() => {
         const lowerCaseQuery = submittedQuery.toLowerCase().trim();
-        if (!lowerCaseQuery) return allProducts; // Jika query kosong, tampilkan semua
+        if (!lowerCaseQuery) return allProducts;
         return allProducts.filter(item =>
             item.name.toLowerCase().includes(lowerCaseQuery) ||
-            item.description.toLowerCase().includes(lowerCaseQuery) ||
+            (item.description && item.description.toLowerCase().includes(lowerCaseQuery)) ||
             (item.category && item.category.toLowerCase().includes(lowerCaseQuery)) ||
             (item.location && item.location.toLowerCase().includes(lowerCaseQuery))
         );
@@ -472,26 +490,32 @@ export default function SearchResultsScreen() {
 
     // 2. Filter by applied filters & Sort
     const displayedProducts = useMemo(() => {
-        let items = queryFilteredResults.filter(item =>
-            (appliedSelectedCategories.length === 0 || (item.category && appliedSelectedCategories.includes(item.category))) &&
-            (appliedLocations.length === 0 || (item.location && appliedLocations.includes(item.location))) &&
-            (appliedMinPrice === null || item.price >= appliedMinPrice) &&
-            (appliedMaxPrice === null || item.price <= appliedMaxPrice) &&
-            (appliedMinRating === null || (item.rating && item.rating >= appliedMinRating))
-        );
+        let items = queryFilteredResults.filter(item => {
+            // --- 8. GUNAKAN 'ratingAvg' ---
+            const ratingValue = item.ratingAvg ?? 0; 
+            return (
+                (appliedSelectedCategories.length === 0 || (item.category && appliedSelectedCategories.includes(item.category))) &&
+                (appliedLocations.length === 0 || (item.location && appliedLocations.includes(item.location))) &&
+                (appliedMinPrice === null || item.price >= appliedMinPrice) &&
+                (appliedMaxPrice === null || item.price <= appliedMaxPrice) &&
+                // --- 9. GUNAKAN 'ratingValue' ---
+                (appliedMinRating === null || ratingValue >= appliedMinRating)
+            );
+        });
 
         if (selectedSort !== 'relevan') {
-            items = [...items]; // Buat salinan untuk disortir
+            items = [...items];
             switch (selectedSort) {
                 case 'hargaAsc': items.sort((a, b) => a.price - b.price); break;
                 case 'hargaDesc': items.sort((a, b) => b.price - a.price); break;
-                case 'ratingDesc': items.sort((a, b) => (b.rating || 0) - (a.rating || 0)); break;
+                // --- 10. GUNAKAN 'ratingAvg' UNTUK SORTIR ---
+                case 'ratingDesc': items.sort((a, b) => (b.ratingAvg ?? 0) - (a.ratingAvg ?? 0)); break;
             }
         }
         return items;
     }, [queryFilteredResults, selectedSort, appliedSelectedCategories, appliedLocations, appliedMinPrice, appliedMaxPrice, appliedMinRating]);
 
-    // 3. Filter shops by query
+    // 3. Filter shops by query (Sudah Benar)
     const filteredShops = useMemo(() => {
         const lowerCaseQuery = submittedQuery.toLowerCase().trim();
         if (!lowerCaseQuery) return allSellers;
@@ -502,10 +526,10 @@ export default function SearchResultsScreen() {
     }, [submittedQuery, allSellers]);
 
     // --- Handlers (Modal & Navigation) ---
+    // (Semua handler: toggleChipFilter, handleApplyFilters, handleResetFilters, handleOpenFilter, handleSelectSort, handleSearchSubmit SUDAH BENAR)
     const toggleChipFilter = useCallback((value: string, setter: React.Dispatch<React.SetStateAction<string[]>>) => {
         setter(prev => prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]);
     }, []);
-
     const handleApplyFilters = useCallback(() => {
         setAppliedSelectedCategories(tempSelectedCategories);
         setAppliedLocations(tempSelectedLocations);
@@ -514,7 +538,6 @@ export default function SearchResultsScreen() {
         setAppliedMinRating(tempMinRating);
         setFilterModalVisible(false);
     }, [tempSelectedCategories, tempSelectedLocations, tempMinPrice, tempMaxPrice, tempMinRating]);
-    
     const handleResetFilters = useCallback(() => {
         setTempSelectedCategories([]); setTempSelectedLocations([]);
         setTempMinPrice(''); setTempMaxPrice(''); setTempMinRating(null);
@@ -522,9 +545,7 @@ export default function SearchResultsScreen() {
         setAppliedMinPrice(null); setAppliedMaxPrice(null); setAppliedMinRating(null);
         setFilterModalVisible(false);
     }, []);
-
     const handleOpenFilter = useCallback(() => {
-        // Sync temp state with applied state before opening
         setTempSelectedCategories(appliedSelectedCategories); 
         setTempSelectedLocations(appliedLocations);
         setTempMinPrice(appliedMinPrice !== null ? formatToRupiah(appliedMinPrice) : '');
@@ -532,26 +553,24 @@ export default function SearchResultsScreen() {
         setTempMinRating(appliedMinRating);
         setFilterModalVisible(true);
     }, [appliedSelectedCategories, appliedLocations, appliedMinPrice, appliedMaxPrice, appliedMinRating]);
-
     const handleSelectSort = useCallback((sortId: SortOptionId) => {
         setSelectedSort(sortId); setSortModalVisible(false);
     }, []);
-
-    // Handler baru untuk submit search
     const handleSearchSubmit = useCallback(() => {
         if (searchQuery.trim().length > 0) {
             setSubmittedQuery(searchQuery);
         } else {
-            setSubmittedQuery(''); // Set ke string kosong jika input kosong
+            setSubmittedQuery('');
         }
     }, [searchQuery]);
 
+    // --- 11. GANTI 'ExtendedProduct' MENJADI 'ApiProduct' ---
     const handleNavigateToDetail = useCallback((item: ApiProduct) => {
         navigation.navigate('Detail', { productId: item.id });
     }, [navigation]);
 
-    const handleNavigateToShop = useCallback((shop: ApiSeller) => {
-        navigation.navigate('SellerProfile', { seller: shop });
+    const handleNavigateToShop = useCallback((seller: ApiSeller) => {
+        navigation.navigate('SellerProfile', { seller: seller });
     }, [navigation]);
 
     const isFilterActive = useMemo(() =>
@@ -609,19 +628,22 @@ export default function SearchResultsScreen() {
                 <FlatList
                     data={displayedProducts}
                     renderItem={({ item }) => <ProductCard item={item} onPress={() => handleNavigateToDetail(item)} />}
-                    keyExtractor={item => item.id.toString()}
+                    keyExtractor={item => `prod-${item.id.toString()}`}
                     numColumns={2}
                     contentContainerStyle={styles.gridContainer}
                     ListEmptyComponent={<NoResultsView query={submittedQuery} />}
                     initialNumToRender={6}
+                    // --- 12. TAMBAHKAN columnWrapperStyle ---
+                    columnWrapperStyle={styles.listColumnWrapper} 
                 />
             ) : (
-                <ScrollView contentContainerStyle={styles.listContainer}>
-                    {filteredShops.length > 0
-                        ? filteredShops.map(shop => <ShopCard key={shop.id} shop={shop} onPress={() => handleNavigateToShop(shop)} />)
-                        : <NoResultsView query={submittedQuery} />
-                    }
-                </ScrollView>
+                <FlatList // <-- Ganti ScrollView -> FlatList untuk performa
+                    data={filteredShops}
+                    renderItem={({ item }) => <ShopCard shop={item} onPress={() => handleNavigateToShop(item)} />}
+                    keyExtractor={item => `shop-${item.id.toString()}`}
+                    contentContainerStyle={styles.listContainer}
+                    ListEmptyComponent={<NoResultsView query={submittedQuery} />}
+                />
             )}
             
             <SortModal 
@@ -659,464 +681,670 @@ export default function SearchResultsScreen() {
     );
 }
 
-// ================================================================
-// 🎨 STYLES (DIRAPIKAN & DIKELOMPOKKAN)
-// ================================================================
+
 const styles = StyleSheet.create({
-    // --- 1. Core Layout & Loading/Error ---
-    container: { 
-        flex: 1, 
-        backgroundColor: COLORS.background 
+    
+    // ================================================================
+    // 1. BASE LAYOUT & CONTAINERS
+    // ================================================================
+    container: {
+        flex: 1,
+        backgroundColor: COLORS.background,
     },
+    
+    centerAlign: {
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: 16,
+        padding: 20,
     },
+    
+    loadingText: {
+        marginTop: 12,
+        color: COLORS.textMuted,
+        fontSize: 14,
+        textAlign: 'center',
+    },
+    
+    iconMargin: {
+        marginBottom: 16,
+    },
+    
+    // ================================================================
+    // 2. HEADER SECTION
+    // ================================================================
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: COLORS.card,
+        paddingTop: 12,
+        paddingBottom: 12,
+        paddingHorizontal: 16,
+        borderBottomWidth: 1,
+        borderColor: COLORS.border,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+    },
+    
+    backButton: {
+        marginRight: 12,
+        padding: 8,
+        borderRadius: 8,
+    },
+    
+    // ================================================================
+    // 3. SEARCH BAR
+    // ================================================================
+    searchBarContainer: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: COLORS.background,
+        borderRadius: 12,
+        paddingHorizontal: 14,
+        height: 44,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+    },
+    
+    searchIcon: {
+        marginRight: 10,
+    },
+    
+    searchInput: {
+        flex: 1,
+        paddingVertical: 10,
+        color: COLORS.textPrimary,
+        fontSize: 15,
+    },
+    
+    showingResultsText: {
+        paddingHorizontal: 16,
+        paddingTop: 12,
+        paddingBottom: 8,
+        fontSize: 13,
+        color: COLORS.textMuted,
+        backgroundColor: COLORS.card,
+    },
+    
+    queryHighlight: {
+        color: COLORS.textPrimary,
+        fontWeight: '600',
+    },
+    
+    // ================================================================
+    // 4. TAB NAVIGATION
+    // ================================================================
+    tabContainer: {
+        flexDirection: 'row',
+        backgroundColor: COLORS.card,
+        borderBottomWidth: 1,
+        borderColor: COLORS.border,
+        elevation: 1,
+    },
+    
+    tabButton: {
+        flex: 1,
+        paddingVertical: 14,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderBottomWidth: 3,
+        borderBottomColor: 'transparent',
+    },
+    
+    tabButtonActive: {
+        borderBottomColor: COLORS.primary,
+    },
+    
+    tabText: {
+        color: COLORS.textMuted,
+        fontSize: 15,
+        fontWeight: '500',
+    },
+    
+    tabTextActive: {
+        color: COLORS.primary,
+        fontWeight: '700',
+    },
+    
+    // ================================================================
+    // 5. FILTER & SORT BAR
+    // ================================================================
+    filterSortBar: {
+        flexDirection: 'row',
+        height: 48,
+        backgroundColor: COLORS.card,
+        borderBottomWidth: 1,
+        borderColor: COLORS.border,
+    },
+    
+    filterButton: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 12,
+    },
+    
+    filterButtonText: {
+        color: COLORS.textSecondary,
+        fontSize: 14,
+        fontWeight: '600',
+        marginLeft: 8,
+    },
+    
+    filterSeparator: {
+        width: 1,
+        height: '60%',
+        backgroundColor: COLORS.border,
+        alignSelf: 'center',
+    },
+    
+    filterActiveDot: {
+        width: 7,
+        height: 7,
+        borderRadius: 4,
+        backgroundColor: COLORS.primary,
+        marginLeft: 8,
+    },
+    
+    // ================================================================
+    // 6. LIST LAYOUT
+    // ================================================================
+    listContainer: {
+        padding: 12,
+    },
+    
+    gridContainer: {
+        paddingHorizontal: 12,
+        paddingTop: 12,
+    },
+    
+    listColumnWrapper: {
+        justifyContent: 'space-between',
+    },
+    
+    // ================================================================
+    // 7. EMPTY STATE
+    // ================================================================
     noResultsContainer: {
         flex: 1,
-        justifyContent: 'center',
+        paddingVertical: 100,
+        paddingHorizontal: 32,
         alignItems: 'center',
-        padding: 20,
-        minHeight: 300, // Pastikan mengisi ruang
+        justifyContent: 'center',
     },
+    
     noResultsText: {
         color: COLORS.textPrimary,
         fontSize: 18,
-        fontWeight: '600',
+        fontWeight: '700',
         textAlign: 'center',
+        marginTop: 8,
     },
+    
     noResultsTextSmall: {
         color: COLORS.textMuted,
         fontSize: 14,
         textAlign: 'center',
         marginTop: 8,
+        lineHeight: 20,
     },
-    iconMargin: {
+    
+    // ================================================================
+    // 8. PRODUCT CARD - REDESIGNED FOR MOBILE
+    // ================================================================
+    productCardContainer: {
+        width: '48%',
+        backgroundColor: COLORS.card,
+        borderRadius: 16,
         marginBottom: 12,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        overflow: 'hidden',
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
     },
-
-    // --- 2. Header, Search Bar & Tabs ---
-    header: { 
-        flexDirection: 'row', 
-        alignItems: 'center', 
-        paddingHorizontal: 16, 
-        paddingVertical: 12,
-        borderBottomWidth: 1, // Tambahkan border di bawah header
-        borderBottomColor: COLORS.border,
+    
+    // Product Image Section
+    productCardImage: {
+        height: 140,
+        width: '100%',
+        backgroundColor: COLORS.border,
     },
-    backButton: { 
-        marginRight: 12, 
-        padding: 4 
+    
+    productImagePlaceholder: {
+        height: 140,
+        width: '100%',
+        backgroundColor: COLORS.background,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
-    searchBarContainer: {
-        flex: 1,
+    
+    // Product Content Body
+    productCardBody: {
+        padding: 10,
+    },
+    
+    productCardTitle: {
+        color: COLORS.textPrimary,
+        fontSize: 13,
+        fontWeight: '600',
+        lineHeight: 18,
+        marginBottom: 6,
+        minHeight: 36,
+    },
+    
+    // Location Row
+    locationRow: {
         flexDirection: 'row',
         alignItems: 'center',
+        marginBottom: 10,
+    },
+    
+    locationText: {
+        color: COLORS.textMuted,
+        fontSize: 11,
+        marginLeft: 4,
+        flex: 1,
+    },
+    
+    // Footer Section - FIXED LAYOUT
+    productCardFooter: {
+        flexDirection: 'column',
+        gap: 8,
+    },
+    
+    // Price Row (Full Width)
+    priceRow: {
+        flexDirection: 'row',
+        alignItems: 'baseline',
+    },
+    
+    priceText: {
+        fontSize: 10,
+        color: COLORS.textMuted,
+        marginRight: 4,
+    },
+    
+    priceHighlight: {
+        color: COLORS.primary,
+        fontSize: 16,
+        fontWeight: '700',
+        letterSpacing: -0.5,
+    },
+    
+    pricePeriod: {
+        fontSize: 10,
+        color: COLORS.textMuted,
+        marginLeft: 2,
+    },
+    
+    // Rating Row (Full Width, Separated)
+    ratingRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    
+    ratingBox: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    
+    ratingText: {
+        color: COLORS.textPrimary,
+        fontSize: 12,
+        fontWeight: '700',
+        marginLeft: 4,
+    },
+    
+    reviewCountText: {
+        color: COLORS.textMuted,
+        fontSize: 11,
+        marginLeft: 6,
+    },
+    
+    // Legacy Category Tag (kept for compatibility)
+    categoryTag: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderRadius: 6,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        alignSelf: 'flex-start',
+        marginBottom: 6,
+    },
+    
+    categoryText: {
+        fontSize: 10,
+        fontWeight: '600',
+        marginLeft: 4,
+    },
+    
+    // ================================================================
+    // 9. SHOP CARD - REDESIGNED FOR MOBILE
+    // ================================================================
+    shopCardContainer: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
         backgroundColor: COLORS.card,
-        borderRadius: 8,
-        height: 40,
+        padding: 14,
+        borderRadius: 16,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+    },
+    
+    // Shop Logo
+    shopLogo: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        marginRight: 14,
+        backgroundColor: COLORS.border,
         borderWidth: 1,
         borderColor: COLORS.border,
     },
-    searchIcon: {
-        paddingLeft: 12,
-        paddingRight: 8,
-    },
-    searchInput: {
-        flex: 1,
-        color: COLORS.textPrimary,
-        fontSize: 15,
-        paddingVertical: 8,
-        paddingRight: 12,
-    },
-    showingResultsText: {
-        fontSize: 14,
-        color: COLORS.textSecondary,
-        fontWeight: '500',
-        paddingHorizontal: 16,
-        paddingBottom: 10,
-        paddingTop: 10, // Beri jarak
-    },
-    queryHighlight: { 
-        color: COLORS.textPrimary,
-        fontWeight: '700',
-    },
-    tabContainer: { 
-        flexDirection: 'row', 
-        borderBottomWidth: 1, 
-        borderBottomColor: COLORS.border, 
-        marginHorizontal: 16 
-    },
-    tabButton: { 
-        flex: 1, 
-        paddingVertical: 12, 
-        alignItems: 'center', 
-        borderBottomWidth: 2, 
-        borderBottomColor: 'transparent' 
-    },
-    tabButtonActive: { 
-        borderBottomColor: COLORS.primary 
-    },
-    tabText: { 
-        color: COLORS.textMuted, 
-        fontWeight: '600' 
-    },
-    tabTextActive: { 
-        color: COLORS.primary 
-    },
-
-    // --- 3. Filter/Sort Bar ---
-    filterSortBar: { 
-        flexDirection: 'row', 
-        justifyContent: 'space-around', 
-        backgroundColor: COLORS.background, 
-        borderBottomWidth: 1, 
-        borderBottomColor: COLORS.border, 
-        paddingVertical: 10 
-    },
-    filterButton: { 
-        flexDirection: 'row', 
-        alignItems: 'center' 
-    },
-    filterButtonText: { 
-        color: COLORS.textSecondary, 
-        marginLeft: 6, 
-        fontSize: 14 
-    },
-    filterSeparator: { 
-        width: 1, 
-        height: '80%', 
-        backgroundColor: COLORS.border 
-    },
-    filterActiveDot: { 
-        width: 8, 
-        height: 8, 
-        borderRadius: 4, 
-        backgroundColor: COLORS.primary, 
-        marginLeft: 6 
-    },
-
-    // --- 4. Product Grid (ProductCard) ---
-    gridContainer: { 
-        paddingHorizontal: 12, 
-        paddingTop: 16, 
-        paddingBottom: 16 
-    },
-    productCardContainer: { 
-        flex: 0.5, 
-        backgroundColor: COLORS.card, 
-        margin: 4, 
-        borderRadius: 8, 
-        overflow: 'hidden', 
-        borderWidth: 1, 
-        borderColor: COLORS.border 
-    },
-    productCardImage: { 
-        width: '100%', 
-        height: 120, 
-    },
-    productImagePlaceholder: { 
-        width: '100%', 
-        height: 120, 
-        backgroundColor: COLORS.background, 
-        justifyContent: 'center', 
-        alignItems: 'center' 
-    },
-    productCardBody: { 
-        padding: 10, 
-        flex: 1, 
-        justifyContent: 'space-between' 
-    },
-    productCardTitle: { 
-        color: COLORS.textPrimary, 
-        fontSize: 14, 
-        fontWeight: '600', 
-        marginBottom: 4 
-    },
-    locationRow: { 
-        flexDirection: 'row', 
-        alignItems: 'center', 
-        marginBottom: 6 
-    },
-    locationText: { 
-        color: COLORS.textMuted, 
-        fontSize: 11, 
-        marginLeft: 4, 
-        flex: 1 
-    },
-    categoryTag: { 
-        flexDirection: 'row', 
-        alignItems: 'center', 
-        paddingHorizontal: 6, 
-        paddingVertical: 2, 
-        borderRadius: 4, 
-        alignSelf: 'flex-start', 
-        marginBottom: 8 
-    },
-    categoryText: { 
-        fontSize: 10, 
-        fontWeight: 'bold', 
-        marginLeft: 4 
-    },
-    productCardFooter: { 
-        marginTop: 8 
-    },
-    priceText: { 
-        fontSize: 12, 
-        color: COLORS.textMuted 
-    },
-    priceHighlight: { 
-        color: COLORS.primary, 
-        fontSize: 16, 
-        fontWeight: 'bold' 
-    },
-    pricePeriod: { 
-        fontSize: 12, 
-        color: COLORS.textMuted 
-    },
-    ratingBox: { 
-        flexDirection: 'row', 
-        alignItems: 'center', 
-        alignSelf: 'flex-end', 
-        marginTop: 4 
-    },
-    ratingText: { 
-        color: COLORS.textPrimary, 
-        fontSize: 12, 
-        marginLeft: 4, 
-        fontWeight: '500' 
-    },
     
-    // --- 5. Shop List (ShopCard) ---
-    listContainer: { 
-        paddingHorizontal: 16, 
-        paddingTop: 16,
-        paddingBottom: 16,
-    },
-    shopCardContainer: { 
-        flexDirection: 'row', 
-        backgroundColor: COLORS.card, 
-        borderRadius: 8, 
-        padding: 12, 
-        marginBottom: 12, 
-        alignItems: 'center', 
-        borderWidth: 1, 
-        borderColor: COLORS.border 
-    },
-    shopLogo: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-        marginRight: 12,
-        backgroundColor: COLORS.border,
-    },
+    // Shop Info Container
     shopInfoContainer: {
         flex: 1,
+        marginRight: 12,
     },
+    
     shopName: {
         color: COLORS.textPrimary,
         fontSize: 16,
-        fontWeight: '600',
+        fontWeight: '700',
+        marginBottom: 4,
+        lineHeight: 22,
     },
+    
     shopBio: {
-        color: COLORS.textMuted,
+        color: COLORS.textSecondary,
         fontSize: 13,
-        marginTop: 2,
-        marginBottom: 8,
+        lineHeight: 18,
+        marginBottom: 10,
     },
+    
+    // Shop Stats Row
     shopStatsRow: {
         flexDirection: 'row',
         alignItems: 'center',
+        flexWrap: 'wrap',
     },
+    
     shopStatItem: {
         flexDirection: 'row',
         alignItems: 'center',
         marginRight: 16,
+        marginBottom: 4,
     },
+    
     shopStatText: {
-        color: COLORS.textSecondary,
+        color: COLORS.textMuted,
         fontSize: 12,
-        marginLeft: 5,
+        marginLeft: 6,
+        fontWeight: '500',
     },
+    
     shopArrow: {
-        marginLeft: 10,
+        alignSelf: 'center',
     },
-
-    // --- 6. Common Modal Styles ---
+    
+    // ================================================================
+    // 10. MODAL BASE STYLES
+    // ================================================================
     modalBackdrop: {
         flex: 1,
-        backgroundColor: COLORS.backdrop,
+        backgroundColor: 'rgba(0, 0, 0, 0.65)',
         justifyContent: 'flex-end',
     },
+    
     modalContent: {
         backgroundColor: COLORS.card,
-        borderTopLeftRadius: 16,
-        borderTopRightRadius: 16,
-        padding: 16,
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        paddingHorizontal: 20,
+        paddingTop: 20,
+        paddingBottom: 34,
     },
+    
+    sortModalContent: {
+        minHeight: 300,
+    },
+    
+    filterModalContent: {
+        maxHeight: '88%',
+    },
+    
     modalHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingBottom: 12,
+        paddingBottom: 16,
+        marginBottom: 16,
         borderBottomWidth: 1,
-        borderBottomColor: COLORS.border,
+        borderColor: COLORS.border,
     },
+    
     modalTitle: {
         color: COLORS.textPrimary,
-        fontSize: 18,
-        fontWeight: '600',
+        fontSize: 20,
+        fontWeight: '700',
     },
+    
     closeButton: {
-        padding: 4,
+        padding: 8,
+        borderRadius: 20,
     },
-
-    // --- 7. Sort Modal ---
-    sortModalContent: {
-        paddingBottom: 30, // Ruang aman di bawah
-    },
+    
+    // ================================================================
+    // 11. SORT MODAL OPTIONS
+    // ================================================================
     optionButton: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingVertical: 16,
+        paddingHorizontal: 4,
     },
+    
     optionText: {
         color: COLORS.textSecondary,
         fontSize: 16,
+        fontWeight: '500',
     },
+    
     optionTextActive: {
         color: COLORS.primary,
-        fontWeight: '600',
+        fontWeight: '700',
     },
-
-    // --- 8. Filter Modal ---
-    filterModalContent: {
-        maxHeight: '80%',
-    },
+    
+    // ================================================================
+    // 12. FILTER MODAL - SCROLL CONTENT
+    // ================================================================
     filterScroll: {
-        // ScrollView di dalam modal
+        flex: 1,
+        paddingVertical: 8,
     },
+    
+    filterScrollSpacer: {
+        height: 24,
+    },
+    
     filterSectionTitle: {
         color: COLORS.textPrimary,
         fontSize: 16,
-        fontWeight: '600',
+        fontWeight: '700',
+        marginBottom: 14,
         marginTop: 16,
-        marginBottom: 12,
     },
+    
+    // ================================================================
+    // 13. FILTER CHIPS (Categories/Conditions)
+    // ================================================================
     chipContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-    },
-    chip: {
-        backgroundColor: COLORS.background,
-        borderColor: COLORS.border,
-        borderWidth: 1,
-        borderRadius: 20,
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        marginRight: 8,
         marginBottom: 8,
     },
+    
+    chip: {
+        backgroundColor: COLORS.background,
+        borderRadius: 24,
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        marginRight: 10,
+        marginBottom: 10,
+        borderWidth: 1.5,
+        borderColor: COLORS.border,
+    },
+    
     chipActive: {
         backgroundColor: COLORS.primary,
         borderColor: COLORS.primary,
     },
+    
     chipText: {
         color: COLORS.textSecondary,
         fontSize: 14,
-    },
-    chipTextActive: {
-        color: COLORS.textPrimary,
         fontWeight: '600',
     },
+    
+    chipTextActive: {
+        color: '#FFFFFF',
+        fontWeight: '700',
+    },
+    
+    // ================================================================
+    // 14. PRICE RANGE FILTER
+    // ================================================================
     priceRangeContainer: {
         flexDirection: 'row',
         alignItems: 'center',
+        marginBottom: 8,
     },
+    
     priceInput: {
         flex: 1,
         backgroundColor: COLORS.background,
+        borderRadius: 12,
+        borderWidth: 1.5,
         borderColor: COLORS.border,
-        borderWidth: 1,
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
+        paddingHorizontal: 14,
+        height: 48,
         color: COLORS.textPrimary,
-        fontSize: 14,
+        fontSize: 15,
+        fontWeight: '600',
     },
+    
     priceSeparator: {
         color: COLORS.textMuted,
-        marginHorizontal: 10,
+        marginHorizontal: 12,
+        fontSize: 18,
+        fontWeight: '700',
     },
+    
+    // ================================================================
+    // 15. RATING FILTER BUTTONS
+    // ================================================================
     ratingFilterContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
+        marginBottom: 8,
     },
+    
     ratingButton: {
         flex: 1,
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: COLORS.background,
+        borderRadius: 12,
+        borderWidth: 1.5,
         borderColor: COLORS.border,
-        borderWidth: 1,
-        borderRadius: 8,
-        paddingVertical: 10,
-        marginHorizontal: 4,
+        paddingVertical: 12,
+        marginHorizontal: 5,
     },
+    
     ratingButtonActive: {
         backgroundColor: COLORS.primary,
         borderColor: COLORS.primary,
     },
+    
     ratingButtonText: {
-        color: COLORS.starActive,
+        color: COLORS.textSecondary,
+        fontSize: 14,
+        fontWeight: '700',
         marginLeft: 6,
-        fontWeight: '600',
     },
+    
     ratingButtonTextActive: {
-        color: COLORS.textPrimary,
+        color: '#FFFFFF',
     },
-    filterScrollSpacer: {
-        height: 20, // Beri jarak di akhir scroll
-    },
+    
+    // ================================================================
+    // 16. FILTER MODAL FOOTER (Reset & Apply)
+    // ================================================================
     filterFooter: {
         flexDirection: 'row',
-        borderTopWidth: 1,
-        borderTopColor: COLORS.border,
-        paddingTop: 16,
+        paddingTop: 20,
         marginTop: 16,
-        paddingBottom: 10, // Ruang aman
+        borderTopWidth: 1,
+        borderColor: COLORS.border,
     },
+    
     resetButton: {
         flex: 1,
-        justifyContent: 'center',
+        backgroundColor: COLORS.background,
+        borderRadius: 14,
+        paddingVertical: 16,
         alignItems: 'center',
-        paddingVertical: 12,
-        borderRadius: 8,
+        marginRight: 10,
+        borderWidth: 1.5,
         borderColor: COLORS.border,
-        borderWidth: 1,
-        marginRight: 8,
     },
+    
     resetButtonText: {
-        color: COLORS.textSecondary,
-        fontSize: 16,
-        fontWeight: '600',
-    },
-    applyButton: {
-        flex: 2,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingVertical: 12,
-        borderRadius: 8,
-        backgroundColor: COLORS.primary,
-        marginLeft: 8,
-    },
-    applyButtonText: {
         color: COLORS.textPrimary,
         fontSize: 16,
-        fontWeight: '600',
+        fontWeight: '700',
+    },
+    
+    applyButton: {
+        flex: 2,
+        backgroundColor: COLORS.primary,
+        borderRadius: 14,
+        paddingVertical: 16,
+        alignItems: 'center',
+        marginLeft: 10,
+        elevation: 2,
+        shadowColor: COLORS.primary,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+    },
+    
+    applyButtonText: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: '700',
     },
 });

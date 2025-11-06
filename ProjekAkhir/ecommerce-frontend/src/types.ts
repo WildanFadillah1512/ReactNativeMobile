@@ -2,7 +2,7 @@ import type { ImageSourcePropType } from 'react-native';
 
 /**
  * Tipe data untuk Seller (Toko/Penjual)
- * Sesuai dengan model 'Seller' di Prisma.
+ * (Ini sudah sesuai dengan Prisma)
  */
 export interface ApiSeller {
   id: number;
@@ -11,7 +11,6 @@ export interface ApiSeller {
   bio: string | null;
   rating: number | null;
   itemsRented: number | null;
-  // createdAt dan updatedAt bisa ditambahkan jika frontend perlu
 }
 
 /**
@@ -22,36 +21,53 @@ export interface ApiSeller {
 export interface ApiProduct {
   id: number;
   name: string;
-  price: number; // Dari API, harga adalah angka
+  price: number;
   description: string;
   imageUrl: string | null;
   category: string | null;
-  rating: number | null;
-  reviews: number | null;
+
+  // --- 1. PENYESUAIAN ULASAN & RATING ---
+  // Ganti field dummy dengan field kumulatif dari schema.prisma
+  ratingAvg: number | null;   // <-- Ganti dari 'rating'
+  reviewsCount: number | null; // <-- Ganti dari 'reviews'
+  // ------------------------------------
+
   trending: boolean;
   location: string | null;
   period: string | null;
   seller: ApiSeller; // Relasi ke Seller
-  // createdAt dan updatedAt bisa ditambahkan
+  // createdAt dan updatedAt bisa ditambahkan jika perlu
+  createdAt: string;
+  updatedAt: string;
+  sellerId: number;
 }
 
 /**
  * Tipe data untuk Review/Ulasan.
- * (Nantinya ini akan menjadi model 'Review' di Prisma)
+ * Sesuai dengan API GET /api/products/:id/reviews
  */
 export interface Review {
   id: number;
-  itemId: number;
-  name: string;
-  avatar: string;
   rating: number;
-  comment: string;
-  timestamp: number; // Sebaiknya gunakan tipe 'Date' atau string ISO
+  comment: string | null;
+  createdAt: string; // Ini string tanggal ISO
+  
+  // Relasi ke user yang menulis
+  user: {
+    id: number;
+    name: string | null;
+  };
+  
+  // Hapus field dummy:
+  // itemId: number;
+  // name: string;
+  // avatar: string;
+  // timestamp: number;
 }
 
 /**
  * Tipe data untuk item di dalam Keranjang (Cart)
- * Menggunakan ApiProduct sebagai data dasarnya.
+ * (Ini sudah benar, 'item: ApiProduct' akan otomatis diperbarui)
  */
 export interface CartEntry {
   item: ApiProduct;
@@ -61,31 +77,49 @@ export interface CartEntry {
 
 /**
  * Tipe data untuk Alamat Pengguna.
- * (Nantinya ini akan menjadi model 'Address' di Prisma)
+ * Sesuai dengan model 'Address' di Prisma.
  */
 export interface Address {
   id: number;
   label: string;
-  name: string;
+  // --- 2. PENYESUAIAN ALAMAT ---
+  receiverName: string; // <-- Ganti 'name'
   phone: string;
-  fullAddress: string;
-  latitude?: number;
-  longitude?: number;
+  street: string;     // <-- Ganti 'fullAddress'
+  city: string;       // <-- Field baru
+  province: string;   // <-- Field baru
+  postalCode: string; // <-- Field baru
+  isPrimary: boolean; // <-- Field baru
+  userId: number;     // <-- Field baru
+  createdAt: string;
+  // -----------------------------
+  // Hapus latitude/longitude jika tidak ada di schema
+  // latitude?: number;
+  // longitude?: number;
 }
+
+/**
+ * Tipe data untuk UI (Sudah Benar)
+ * Tipe ini digunakan oleh komponen, datanya sudah dipetakan.
+ */
 export interface RentalItem {
   id: number;
   name: string;
   category: string;
   description: string;
-  image: ImageSourcePropType; // Berbeda dari ApiProduct (imageUrl: string)
-  rating: number;
-  reviews: number;
+  image: ImageSourcePropType;
+  rating: number;  // Ini diisi dari ApiProduct.ratingAvg
+  reviews: number; // Ini diisi dari ApiProduct.reviewsCount
   trending: boolean;
-  price: string; // Berbeda dari ApiProduct (price: number)
+  price: string; 
   period: string;
   location: string;
   seller: ApiSeller;
 }
+
+/**
+ * Tipe data untuk Checkout (Sudah Benar)
+ */
 export interface CheckoutRentalItem extends RentalItem {
   duration: number;
 }

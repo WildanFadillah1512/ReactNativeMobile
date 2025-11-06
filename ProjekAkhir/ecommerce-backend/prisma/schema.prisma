@@ -32,9 +32,10 @@ model User {
   role      Role           @default(PENYEWA)
   saved     SavedProduct[]
   cart      CartItem[]
-
-  // --- TAMBAHAN UNTUK ALAMAT ---
   addresses Address[]
+
+  // --- TAMBAHAN UNTUK ULASAN ---
+  reviews   Review[] // User ini bisa menulis banyak ulasan
 }
 
 // Model untuk Penjual (Seller/Toko)
@@ -60,8 +61,15 @@ model Product {
   description String
   imageUrl    String?
   category    String?
-  rating      Float?   // Nanti kita akan ganti ini saat membuat fitur Ulasan
-  reviews     Int?     // Nanti kita akan ganti ini
+  
+  // --- PERUBAHAN UNTUK ULASAN (RATING KUMULATIF) ---
+  // rating      Float?   // HAPUS INI (dummy)
+  // reviews     Int?     // HAPUS INI (dummy)
+  
+  ratingAvg   Float    @default(0) // Rating rata-rata (kumulatif)
+  reviewsCount Int     @default(0) // Jumlah total ulasan
+  // ------------------------------------------------
+
   trending    Boolean  @default(false)
   location    String?
   period      String?
@@ -75,6 +83,9 @@ model Product {
   // --- RELASI YANG SUDAH ADA ---
   likedBy     SavedProduct[]
   inCart      CartItem[]
+  
+  // --- TAMBAHAN UNTUK ULASAN ---
+  reviews     Review[] // Produk ini memiliki banyak ulasan
 }
 
 
@@ -82,15 +93,10 @@ model Product {
 model SavedProduct {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-
-  // Relasi ke User
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    Int
-  
-  // Relasi ke Product
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   productId Int
-  
   @@unique([userId, productId]) 
 }
 
@@ -98,34 +104,46 @@ model SavedProduct {
 model CartItem {
   id        Int      @id @default(autoincrement())
   duration  Int      @default(1)
-
-  // Relasi ke User
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    Int
-  
-  // Relasi ke Product
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   productId Int
-  
   @@unique([userId, productId])
 }
 
 
-// --- TAMBAHAN UNTUK ALAMAT ---
-// Model baru untuk menyimpan alamat pengiriman per-user
+// --- MODEL UNTUK FITUR "ALAMAT" ---
 model Address {
   id           Int      @id @default(autoincrement())
-  label        String   // Mis: "Rumah", "Kantor"
-  receiverName String   // Nama penerima
-  phone        String   // Nomor HP penerima
-  street       String   // Nama jalan, nomor
+  label        String
+  receiverName String
+  phone        String
+  street       String
   city         String
-  province     String   // Provinsi
+  province     String
   postalCode   String
   isPrimary    Boolean  @default(false)
   createdAt    DateTime @default(now())
-
-  // Relasi: Alamat ini dimiliki oleh SATU user
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId       Int
+}
+
+
+// --- MODEL BARU UNTUK FITUR "ULASAN" ---
+model Review {
+  id        Int      @id @default(autoincrement())
+  rating    Int      // Rating 1-5 yang diberikan user
+  comment   String?  // Teks ulasan
+  createdAt DateTime @default(now())
+  
+  // Relasi: Ulasan ini ditulis oleh SATU User
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int
+  
+  // Relasi: Ulasan ini untuk SATU Product
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId Int
+
+  // 1 user hanya bisa review 1 produk 1x
+  @@unique([userId, productId])
 }

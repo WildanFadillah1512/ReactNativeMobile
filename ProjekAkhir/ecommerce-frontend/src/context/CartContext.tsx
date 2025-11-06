@@ -7,12 +7,13 @@ import React, {
   useCallback 
 } from 'react';
 import { Alert } from 'react-native';
-import apiClient, { BASE_URL } from '../config/api'; // Impor apiClient & BASE_URL
+import apiClient, { BASE_URL } from '../config/api';
 import { useAuth } from './AuthContext';
-import type { ApiProduct, CartEntry, CheckoutRentalItem } from '../types';
+// Impor ini sudah benar (mengambil dari 'kamus utama')
+import type { ApiProduct, CartEntry, CheckoutRentalItem } from '../types'; 
 import { formatCurrency } from '../utils/riceParse'; 
 
-// Tipe DbCartItem
+// Tipe DbCartItem (Sudah Benar)
 interface DbCartItem {
   id: number;
   duration: number;
@@ -38,13 +39,14 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [isLoading, setIsLoading] = useState(true);
     const { isLoggedIn } = useAuth();
 
+    // (useEffect, isInCart, addToCart, removeFromCart, clearCart, updateItemDuration, toggleItemSelection)
+    // ... (Semua fungsi ini sudah benar) ...
     useEffect(() => {
         const loadCartEntries = async () => {
             if (isLoggedIn) {
                 setIsLoading(true);
                 try {
-                    // --- PERBAIKAN: Hapus '/api' ---
-                    const response = await apiClient.get('/cart'); // DARI: '/api/cart'
+                    const response = await apiClient.get('/cart');
                     
                     if (Array.isArray(response.data)) {
                         const loadedEntries: CartEntry[] = response.data.map((dbItem: DbCartItem) => ({
@@ -55,7 +57,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         setCartEntries(loadedEntries);
                     }
                 } catch (error) {
-                    console.error("Gagal memuat keranjang:", error); // Ini yang muncul di screenshot
+                    console.error("Gagal memuat keranjang:", error);
                 } finally {
                     setIsLoading(false);
                 }
@@ -86,8 +88,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setCartEntries(prev => [...prev, newEntry]);
 
         try {
-            // --- PERBAIKAN: Hapus '/api' ---
-            await apiClient.post('/cart', { // DARI: '/api/cart'
+            await apiClient.post('/cart', {
                 productId: itemToAdd.id,
                 duration: 1 
             });
@@ -108,8 +109,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setCartEntries(updatedCart);
 
         try {
-            // --- PERBAIKAN: Hapus '/api' ---
-            await apiClient.delete(`/cart/${itemIdToRemove}`); // DARI: `/api/cart/${...}`
+            await apiClient.delete(`/cart/${itemIdToRemove}`);
         } catch (error) {
             console.error("Gagal menghapus dari keranjang:", error);
             setCartEntries(previousCart);
@@ -124,8 +124,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setCartEntries([]);
         
         try {
-            // --- PERBAIKAN: Hapus '/api' ---
-            await apiClient.delete('/cart'); // DARI: '/api/cart'
+            await apiClient.delete('/cart');
         } catch (error) {
             console.error("Gagal mengosongkan keranjang:", error);
             setCartEntries(previousCart);
@@ -145,8 +144,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setCartEntries(updatedCart);
 
         try {
-            // --- PERBAIKAN: Hapus '/api' ---
-            await apiClient.post('/cart', { // DARI: '/api/cart'
+            await apiClient.post('/cart', {
                 productId: itemId,
                 duration: newDuration
             });
@@ -165,13 +163,13 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         );
     }, []);
 
+    // --- DI SINI PERBAIKANNYA ---
     const getSelectedItemsForCheckout = useCallback((): CheckoutRentalItem[] => {
         return cartEntries
             .filter(entry => entry.selected) 
             .map(entry => {
                 const product = entry.item; 
                 
-                // Gunakan BASE_URL (http://...) untuk gambar, bukan apiClient.defaults.baseURL (.../api)
                 const imageUri = product.imageUrl 
                     ? `${BASE_URL}/images/${product.imageUrl}` 
                     : null;
@@ -186,8 +184,12 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     category: product.category ?? 'Lainnya',
                     location: product.location ?? 'Lokasi tidak diketahui',
                     period: product.period ?? '', 
-                    rating: product.rating ?? 0,
-                    reviews: product.reviews ?? 0, 
+                    
+                    // --- 1. GUNAKAN NAMA PROPERTI BARU ---
+                    rating: product.ratingAvg ?? 0,
+                    reviews: product.reviewsCount ?? 0, 
+                    // ---------------------------------
+                    
                     seller: {
                         ...product.seller,
                         avatar: product.seller.avatar ?? '', 
@@ -217,6 +219,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     );
 };
 
+// (useCart hook sudah benar)
 export const useCart = () => {
     const context = useContext(CartContext);
     if (!context) {

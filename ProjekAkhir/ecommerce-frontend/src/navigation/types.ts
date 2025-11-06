@@ -1,12 +1,10 @@
 import type { RouteProp, NavigatorScreenParams } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-// --- 1. SESUAIKAN IMPOR ---
-// Hapus 'Address' dari sini, karena kita akan definisikan di bawah
+// --- 1. Impor Tipe (Sudah Benar) ---
 import type { ApiSeller, CheckoutRentalItem } from '../types'; 
 
-// --- 2. DEFINISIKAN TIPE 'ADDRESS' BARU ---
-// Tipe ini sekarang cocok dengan schema.prisma dan API backend Anda
+// --- 2. Definisi Tipe 'Address' (Sudah Benar) ---
 export type Address = {
   id: number;
   label: string;
@@ -48,15 +46,12 @@ export type RootStackParamList = {
   };
   Address: {
     currentAddressId?: number;
-    // 'items' dibuat opsional (?) karena tidak selalu dikirim
-    // (misal, saat navigasi dari ProfileScreen)
     items?: CheckoutRentalItem[]; 
   };
   Success: undefined;
 
   AddAddress: undefined;
   EditAddress: { 
-    // 'address' sekarang menggunakan tipe 'Address' baru yang kita definisikan di atas
     address: Address 
   };
   Chat: {
@@ -66,7 +61,18 @@ export type RootStackParamList = {
     sellerAvatar?: string | null;
   };
   SellerProfile: { seller: ApiSeller };
-  AllReviews: { itemId: number; productName: string };
+  AllReviews: { 
+    itemId: number; // <-- Ini adalah 'productId'
+    productName: string 
+  };
+  
+  // --- 5. TAMBAHAN BARU UNTUK FITUR ULASAN ---
+  TulisUlasan: {
+    productId: number;
+    productName: string;
+  };
+  // -----------------------------------------
+  
   Saved: undefined;
   Cart: undefined;
   SearchHistory: undefined;
@@ -83,4 +89,3 @@ export type RootStackRouteProp<T extends keyof RootStackParamList> = RouteProp<
   RootStackParamList,
   T
 >;
-

@@ -2,23 +2,21 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ImageBackground, TouchableOpacity, ScrollView,
-  Image, Alert, ActivityIndicator, Modal, Pressable, Platform, TextInput,
+  Image, Alert, ActivityIndicator, Modal, Pressable,  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import FeatherIcon from 'react-native-vector-icons/Feather'; // <-- Impor FeatherIcon
 import { useRoute, useNavigation, type RouteProp } from '@react-navigation/native';
 import { RootStackParamList, RootStackNavigationProp } from '../navigation/types';
-import { useReviews } from '../context/ReviewContext';
+// HAPUS: import { useReviews } from '../context/ReviewContext'; // <-- HAPUS CONTEXT DUMMY
 import { useLikes } from '../context/LikeContext';
 import { useCart } from '../context/CartContext';
 import { formatCurrency } from '../utils/riceParse';
-import type { CheckoutRentalItem, ApiProduct, ApiSeller, Review } from '../types';
+// HAPUS: import type { CheckoutRentalItem, ApiProduct, ApiSeller, Review } from '../types';
+import type { CheckoutRentalItem, ApiProduct, ApiSeller } from '../types'; // <-- Hapus 'Review'
 import { COLORS } from '../config/theme';
-
-// --- 1. GANTI IMPORT API ---
-import apiClient, { BASE_URL } from '../config/api'; // <-- Ganti di sini
-
-// --- 2. IMPORT HOOK AUTENTIKASI ---
+import apiClient, { BASE_URL } from '../config/api';
 import { useAuth } from '../context/AuthContext';
 
 const MIN_DURATION = 1;
@@ -27,28 +25,33 @@ const MAX_DURATION = 30;
 // --- TYPES ---
 type DetailRouteProp = RouteProp<RootStackParamList, 'Detail'>;
 
+// --- 1. DEFINISIKAN TIPE ULASAN SESUAI API ---
+type ApiReview = {
+  id: number;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+  user: {
+    id: number;
+    name: string | null;
+  };
+};
+
 // --- HELPER FUNCTIONS & COMPONENTS ---
 
-/**
- * Membuat URI gambar yang valid dari filename.
- */
-// --- 3. GANTI API_URL MENJADI BASE_URL ---
+// buildImageUri (Sudah Benar)
 const buildImageUri = (filename?: string | null): string | null => {
   if (!filename) return null;
   if (filename.startsWith('http://') || filename.startsWith('https://')) return filename;
-  return `${BASE_URL}/images/${filename}`; // <-- Ganti di sini
+  return `${BASE_URL}/images/${filename}`;
 };
 
-/**
- * Mengkonversi ApiProduct menjadi CheckoutRentalItem untuk proses checkout.
- * (Logika Anda sudah bagus)
- */
+// mapApiProductToCheckoutItem (Disesuaikan untuk Rating Baru)
 const mapApiProductToCheckoutItem = (
     product: ApiProduct,
     duration: number,
     productImageUri: string | null
 ): CheckoutRentalItem => {
-  // ... (Kode Anda sudah benar)
   return {
       ...product,
       price: formatCurrency(product.price),
@@ -57,11 +60,13 @@ const mapApiProductToCheckoutItem = (
       category: product.category ?? 'Lainnya',
       location: product.location ?? 'Lokasi tidak diketahui',
       period: product.period ?? '',
-      rating: product.rating ?? 0,
-      reviews: product.reviews ?? 0,
+      // --- 2. SESUAIKAN DENGAN SKEMA BARU ---
+      rating: product.ratingAvg ?? 0,   // <-- Ganti 'rating'
+      reviews: product.reviewsCount ?? 0, // <-- Ganti 'reviews'
+      // ---------------------------------
       seller: {
           ...product.seller,
-          id: product.seller?.id ?? 0, // Pastikan ID adalah angka
+          id: product.seller?.id ?? 0,
           name: product.seller?.name ?? 'Penjual',
           avatar: product.seller?.avatar ?? '',
           bio: product.seller?.bio ?? '',
@@ -71,8 +76,7 @@ const mapApiProductToCheckoutItem = (
   };
 };
 
-// --- (Semua Komponen Helper Anda: StarRating, InteractiveStarRating, Stepper, dll... sudah bagus) ---
-// StarRating
+// StarRating (Sudah Benar)
 const StarRating: React.FC<{ rating: number }> = React.memo(({ rating }) => (
     <View style={styles.starRatingContainer}>
       {Array.from({ length: 5 }).map((_, index) => (
@@ -87,7 +91,7 @@ const StarRating: React.FC<{ rating: number }> = React.memo(({ rating }) => (
     </View>
 ));
 
-// InteractiveStarRating
+// InteractiveStarRating (Sudah Benar)
 const InteractiveStarRating: React.FC<{ rating: number; onRatingChange: (r: number) => void; size?: number }> = React.memo(({
     rating,
     onRatingChange,
@@ -102,7 +106,7 @@ const InteractiveStarRating: React.FC<{ rating: number; onRatingChange: (r: numb
     </View>
 ));
 
-// Stepper
+// Stepper (Sudah Benar)
 const Stepper: React.FC<{ value: number; onIncrement: () => void; onDecrement: () => void; min: number; max: number }> = React.memo(({
     value,
     onIncrement,
@@ -121,7 +125,7 @@ const Stepper: React.FC<{ value: number; onIncrement: () => void; onDecrement: (
     </View>
 ));
 
-// DetailHeader
+// DetailHeader (Sudah Benar)
 const DetailHeader: React.FC<{
     imageUri: string | null;
     isLiked: boolean;
@@ -158,15 +162,17 @@ const DetailHeader: React.FC<{
     );
 });
 
-// ProductInfo
+// ProductInfo (Disesuaikan untuk Rating Kumulatif)
 const ProductInfo: React.FC<{ product: ApiProduct; pricePerDay: number }> = React.memo(({ product, pricePerDay }) => (
     <>
         <View style={styles.titleSection}>
             <Text style={styles.title} numberOfLines={2}>{product.name}</Text>
             <View style={styles.ratingBox}>
                 <Icon name="star" size={14} color={COLORS.starActive} />
-                <Text style={styles.ratingText}>{Number(product.rating ?? 0).toFixed(1)}</Text>
-                <Text style={styles.reviewCountText}>({product.reviews ?? 0})</Text>
+                {/* --- 3. SESUAIKAN DENGAN SKEMA BARU --- */}
+                <Text style={styles.ratingText}>{Number(product.ratingAvg ?? 0).toFixed(1)}</Text>
+                <Text style={styles.reviewCountText}>({product.reviewsCount ?? 0})</Text>
+                {/* --------------------------------- */}
             </View>
         </View>
 
@@ -185,7 +191,7 @@ const ProductInfo: React.FC<{ product: ApiProduct; pricePerDay: number }> = Reac
     </>
 ));
 
-// SellerInfo
+// SellerInfo (Sudah Benar)
 const SellerInfo: React.FC<{
     seller: ApiSeller | null;
     sellerAvatarUri: string | null;
@@ -214,15 +220,15 @@ const SellerInfo: React.FC<{
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.chatButton} onPress={onChatPress}>
-                <Icon name="comment" size={20} color="white" />
+                <Icon name="comment" size={20} color={COLORS.primary} />
             </TouchableOpacity>
         </View>
     );
 });
 
-// ReviewList
+// ReviewList (Disesuaikan untuk Data API)
 const ReviewList: React.FC<{
-    reviews: Review[];
+    reviews: ApiReview[]; // <-- 4. Gunakan Tipe ApiReview
     allReviewsCount: number;
     isLoading: boolean;
     onViewAll: () => void;
@@ -243,16 +249,20 @@ const ReviewList: React.FC<{
             reviews.map((review) => (
                 <View key={review.id} style={styles.reviewCard}>
                     <View style={styles.reviewHeader}>
-                        <Image
-                            source={buildImageUri(review.avatar) ? { uri: buildImageUri(review.avatar)! } : require('../assets/images/avatar-placeholder.png')}
-                            style={styles.reviewAvatar}
-                        />
+                        {/* --- 5. SESUAIKAN DENGAN SKEMA BARU --- */}
+                        <View style={styles.reviewAvatar}>
+                          <FeatherIcon name="user" size={20} color={COLORS.textMuted} />
+                        </View>
                         <View style={styles.reviewUserInfo}>
-                            <Text style={styles.reviewUserName}>{review.name}</Text>
+                            <Text style={styles.reviewUserName}>{review.user.name || 'User Anonim'}</Text>
                             <StarRating rating={review.rating} />
                         </View>
+                        <Text style={styles.reviewDate}>
+                          {new Date(review.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                        </Text>
+                        {/* --------------------------------- */}
                     </View>
-                    <Text style={styles.reviewComment}>{review.comment}</Text>
+                    <Text style={styles.reviewComment}>{review.comment || 'Tidak ada komentar.'}</Text>
                 </View>
             ))
         ) : (
@@ -261,14 +271,15 @@ const ReviewList: React.FC<{
     </>
 ));
 
-// AddReviewForm
+// AddReviewForm (Sudah Benar)
 const AddReviewForm: React.FC<{
     rating: number;
     comment: string;
+    isSubmitting: boolean; // <-- 6. Tambahkan state 'isSubmitting'
     onRatingChange: (rating: number) => void;
     onCommentChange: (comment: string) => void;
     onSubmit: () => void;
-}> = React.memo(({ rating, comment, onRatingChange, onCommentChange, onSubmit }) => (
+}> = React.memo(({ rating, comment, isSubmitting, onRatingChange, onCommentChange, onSubmit }) => (
     <View style={styles.addReviewContainer}>
         <Text style={styles.addReviewLabel}>Rating Anda:</Text>
         <InteractiveStarRating rating={rating} onRatingChange={onRatingChange} size={32} />
@@ -284,13 +295,21 @@ const AddReviewForm: React.FC<{
             textAlignVertical="top"
         />
 
-        <TouchableOpacity style={styles.submitButton} onPress={onSubmit}>
-            <Text style={styles.submitButtonText}>Kirim Ulasan</Text>
+        <TouchableOpacity 
+          style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]} 
+          onPress={onSubmit} 
+          disabled={isSubmitting}
+        >
+            {isSubmitting ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text style={styles.submitButtonText}>Kirim Ulasan</Text>
+            )}
         </TouchableOpacity>
     </View>
 ));
 
-// DetailFooter
+// DetailFooter (Sudah Benar)
 const DetailFooter: React.FC<{
     onAddToCart: () => void;
     onRent: () => void;
@@ -309,7 +328,7 @@ const DetailFooter: React.FC<{
     </SafeAreaView>
 ));
 
-// RentalModal
+// RentalModal (Sudah Benar)
 const RentalModal: React.FC<{
     visible: boolean;
     onClose: () => void;
@@ -386,45 +405,47 @@ const RentalModal: React.FC<{
 
 export default function DetailScreen() {
     
-    // --- 4. TAMBAHKAN HOOK AUTH & PROMPT LOGIN ---
+    // --- Hooks ---
     const { isLoggedIn } = useAuth();
     const navigation = useNavigation<RootStackNavigationProp>();
-
-    const promptLogin = useCallback(() => {
-      Alert.alert(
-        "Login Diperlukan",
-        "Anda harus login terlebih dahulu untuk menggunakan fitur ini.",
-        [
-          { text: "Batal", style: "cancel" },
-          { 
-            text: "Login Sekarang", 
-            onPress: () => navigation.navigate('Login')
-          }
-        ]
-      );
-    }, [navigation]);
-    // --- AKHIR PERUBAHAN ---
-
-    // --- Hooks ---
     const route = useRoute<DetailRouteProp>();
     const { productId } = route.params;
-
     const { likedIds, toggleLike } = useLikes();
     const { addToCart } = useCart();
-    const { getReviewsForItem, addReviewForItem, loading: reviewsLoading } = useReviews();
+    // HAPUS: const { getReviewsForItem, addReviewForItem, loading: reviewsLoading } = useReviews();
 
     // --- State for Data Fetching ---
     const [product, setProduct] = useState<ApiProduct | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    
+    // --- 7. STATE BARU UNTUK ULASAN DARI API ---
+    const [reviews, setReviews] = useState<ApiReview[]>([]);
+    const [reviewsLoading, setReviewsLoading] = useState(true);
 
     // --- State for UI ---
     const [isDurationModalVisible, setIsDurationModalVisible] = useState(false);
     const [selectedDuration, setSelectedDuration] = useState<number>(MIN_DURATION);
     const [newRating, setNewRating] = useState(0);
     const [newComment, setNewComment] = useState('');
+    const [isSubmittingReview, setIsSubmittingReview] = useState(false); // <-- State loading baru
 
-    // --- 5. UBAH DATA FETCHING EFFECT (Gunakan apiClient) ---
+    // --- 8. FUNGSI BARU UNTUK FETCH ULASAN ---
+    const fetchReviews = useCallback(async () => {
+      if (!productId) return;
+      setReviewsLoading(true);
+      try {
+        const response = await apiClient.get(`/products/${productId}/reviews`);
+        setReviews(response.data);
+      } catch (err) {
+        console.error("Failed to fetch reviews:", err);
+        // Tidak perlu alert, cukup tampilkan 'Belum ada ulasan'
+      } finally {
+        setReviewsLoading(false);
+      }
+    }, [productId]);
+
+    // --- Data Fetching Effect (Product & Reviews) ---
     useEffect(() => {
         const fetchProductDetails = async () => {
             if (!productId) {
@@ -437,12 +458,12 @@ export default function DetailScreen() {
                 setIsLoading(true);
                 setError(null);
                 
-                // Ganti fetch dengan apiClient
+                // 1. Ambil data produk
                 const response = await apiClient.get(`/products/${productId}`);
-                
-                // Axios otomatis melempar error, jadi tidak perlu cek response.ok
-                // Data ada di response.data
                 setProduct(response.data);
+                
+                // 2. Ambil data ulasan
+                await fetchReviews();
 
             } catch (err: any) {
                 console.error("DetailScreen fetch error:", err);
@@ -459,14 +480,11 @@ export default function DetailScreen() {
         };
 
         fetchProductDetails();
-    }, [productId]); // Hanya fetch ulang jika productId berubah
-    // --- AKHIR PERUBAHAN ---
+    }, [productId, fetchReviews]); // <-- Tambahkan fetchReviews
 
-    // --- Memoized Values (Sudah Benar) ---
-    const allItemReviews = useMemo(() => {
-        return product ? getReviewsForItem(product.id) : [];
-    }, [product, getReviewsForItem]);
-    const displayedReviews = useMemo(() => allItemReviews.slice(0, 2), [allItemReviews]);
+    // --- Memoized Values ---
+    // HAPUS: allItemReviews & displayedReviews yang lama
+    const displayedReviews = useMemo(() => reviews.slice(0, 2), [reviews]); // <-- Tampilkan 2 ulasan terbaru
     const isLiked = useMemo(() => {
         return product ? likedIds.includes(product.id) : false;
     }, [product, likedIds]);
@@ -475,10 +493,24 @@ export default function DetailScreen() {
     const productImageUri = useMemo(() => product ? buildImageUri(product.imageUrl) : null, [product]);
     const sellerAvatarUri = useMemo(() => product ? buildImageUri(product.seller?.avatar) : null, [product]);
 
-    // --- 6. LINDUNGI SEMUA HANDLER AKSI ---
+    // --- Handlers (Dilindungi Auth) ---
     
+    const promptLogin = useCallback(() => {
+      Alert.alert(
+        "Login Diperlukan",
+        "Anda harus login terlebih dahulu untuk menggunakan fitur ini.",
+        [
+          { text: "Batal", style: "cancel" },
+          { 
+            text: "Login Sekarang", 
+            onPress: () => navigation.navigate('Login')
+          }
+        ]
+      );
+    }, [navigation]);
+
     const handleToggleLike = useCallback(async () => {
-        if (!isLoggedIn) { promptLogin(); return; } // <-- DILINDUNGI
+        if (!isLoggedIn) { promptLogin(); return; }
         if (!product) return;
         try {
             await toggleLike(product.id);
@@ -489,7 +521,7 @@ export default function DetailScreen() {
     }, [product, toggleLike, isLoggedIn, promptLogin]);
 
     const handleAddToCart = useCallback(async () => {
-        if (!isLoggedIn) { promptLogin(); return; } // <-- DILINDUNGI
+        if (!isLoggedIn) { promptLogin(); return; }
         if (!product) return;
         try {
             const added = await addToCart(product);
@@ -507,31 +539,45 @@ export default function DetailScreen() {
         }
     }, [product, addToCart, navigation, isLoggedIn, promptLogin]);
 
+    // --- 9. SESUAIKAN FUNGSI SUBMIT ULASAN ---
     const handleSubmitReview = useCallback(async () => {
-        if (!isLoggedIn) { promptLogin(); return; } // <-- DILINDUNGI
+        if (!isLoggedIn) { promptLogin(); return; }
         if (!product) return;
         if (newRating === 0) {
             Alert.alert('Rating Belum Dipilih', 'Silakan pilih rating bintang terlebih dahulu.');
             return;
         }
-        if (newComment.trim().length < 5) {
-            Alert.alert('Komentar Pendek', 'Komentar minimal 5 karakter.');
-            return;
-        }
+        
+        setIsSubmittingReview(true);
         try {
-            await addReviewForItem(product.id, newRating, newComment.trim());
+            // Panggil API POST baru kita
+            await apiClient.post(`/products/${product.id}/reviews`, {
+              rating: newRating,
+              comment: newComment.trim()
+            });
+
+            // Reset form
             setNewRating(0);
             setNewComment('');
             Alert.alert('Ulasan Terkirim', 'Terima kasih atas ulasan Anda!');
-        } catch (err) {
-            console.error('Submit review error:', err);
-            Alert.alert('Gagal Mengirim', 'Terjadi kesalahan saat menyimpan ulasan.');
-        }
-    }, [product, newRating, newComment, addReviewForItem, isLoggedIn, promptLogin]);
+            
+            // Ambil ulang data ulasan DAN data produk (untuk update rating kumulatif)
+            await fetchReviews();
+            const productResponse = await apiClient.get(`/products/${productId}`);
+            setProduct(productResponse.data);
 
-    // Modal & Checkout Handlers
+        } catch (err: any) {
+            console.error('Submit review error:', err);
+            const message = err.response?.data?.message || 'Gagal menyimpan ulasan.';
+            Alert.alert('Gagal Mengirim', message);
+        } finally {
+          setIsSubmittingReview(false);
+        }
+    }, [product, newRating, newComment, isLoggedIn, promptLogin, fetchReviews, productId]);
+
+    // Modal & Checkout Handlers (Sudah Benar)
     const openDurationModal = useCallback(() => {
-        if (!isLoggedIn) { promptLogin(); return; } // <-- DILINDUNGI
+        if (!isLoggedIn) { promptLogin(); return; }
         setSelectedDuration(MIN_DURATION);
         setIsDurationModalVisible(true);
     }, [isLoggedIn, promptLogin]);
@@ -541,7 +587,6 @@ export default function DetailScreen() {
     const decrementDuration = useCallback(() => setSelectedDuration((p) => Math.max(p - 1, MIN_DURATION)), []);
 
     const confirmDurationAndCheckout = useCallback(() => {
-        // Tidak perlu cek isLoggedIn lagi, karena openDurationModal sudah mengecek
         if (!product) return;
         if (selectedDuration < MIN_DURATION) {
             Alert.alert('Durasi Tidak Valid', `Pilih durasi minimal ${MIN_DURATION} hari.`);
@@ -553,16 +598,19 @@ export default function DetailScreen() {
         navigation.navigate('Checkout', { items: [itemToCheckout] });
     }, [product, selectedDuration, productImageUri, navigation, closeDurationModal]);
     
-    // Navigation Handlers
+    // Navigation Handlers (Sudah Benar)
     const handleGoBack = useCallback(() => navigation.goBack(), [navigation]);
     
     const handleViewAllReviews = useCallback(() => {
         if (!product) return;
-        navigation.navigate('AllReviews', { itemId: product.id, productName: product.name });
+        navigation.navigate('AllReviews', { 
+          itemId: product.id, // <-- 'itemId' sekarang adalah 'productId'
+          productName: product.name 
+        });
     }, [navigation, product]);
 
     const handleChatPress = useCallback(() => {
-        if (!isLoggedIn) { promptLogin(); return; } // <-- DILINDUNGI
+        if (!isLoggedIn) { promptLogin(); return; }
         if (!product || !product.seller) return;
         navigation.navigate('Chat', {
             sellerId: product.seller.id,
@@ -573,7 +621,6 @@ export default function DetailScreen() {
     }, [navigation, product, sellerAvatarUri, isLoggedIn, promptLogin]);
     
     const handleProfilePress = useCallback(() => {
-        // Navigasi ke profil seller bersifat publik, tidak perlu auth
         if (!product || !product.seller) return;
         navigation.navigate('SellerProfile', { seller: product.seller });
     }, [navigation, product]);
@@ -645,9 +692,9 @@ export default function DetailScreen() {
                     <View style={styles.divider} />
 
                     <ReviewList
-                        reviews={displayedReviews}
-                        allReviewsCount={allItemReviews.length}
-                        isLoading={reviewsLoading}
+                        reviews={displayedReviews} // <-- Gunakan state 'reviews'
+                        allReviewsCount={reviews.length} // <-- Hitung dari 'reviews'
+                        isLoading={reviewsLoading} // <-- Gunakan state loading ulasan
                         onViewAll={handleViewAllReviews}
                     />
 
@@ -657,16 +704,17 @@ export default function DetailScreen() {
                     <AddReviewForm
                         rating={newRating}
                         comment={newComment}
+                        isSubmitting={isSubmittingReview} // <-- Kirim state loading
                         onRatingChange={setNewRating}
                         onCommentChange={setNewComment}
-                        onSubmit={handleSubmitReview}
+                        onSubmit={handleSubmitReview} // <-- Hubungkan ke fungsi baru
                     />
                 </View>
             </ScrollView>
 
             <DetailFooter
                 onAddToCart={handleAddToCart}
-                onRent={openDurationModal} // <-- Ini sudah dilindungi
+                onRent={openDurationModal}
             />
 
             <RentalModal
@@ -683,8 +731,8 @@ export default function DetailScreen() {
         </View>
     );
 }
+
 // --- STYLES ---
-// Ganti StyleSheet Anda yang terpotong dengan yang LENGKAP ini
 const styles = StyleSheet.create({
     // --- Core Layout & Loading/Error States ---
     container: {
@@ -739,13 +787,11 @@ const styles = StyleSheet.create({
         color: COLORS.textPrimary,
         marginBottom: 16,
     },
-    // --- INI STYLE YANG HILANG ---
     description: {
         fontSize: 15,
         color: COLORS.textSecondary,
         lineHeight: 22,
     },
-    // ---------------------------------
 
     // --- Header (DetailHeader) ---
     imageHeader: {
@@ -789,7 +835,7 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     title: {
-        fontSize: 28,
+        fontSize: 24, // <-- Sedikit dikecilkan
         fontWeight: 'bold',
         color: COLORS.textPrimary,
         flex: 1,
@@ -849,20 +895,19 @@ const styles = StyleSheet.create({
         marginRight: 6,
     },
     pricePeriodInline: {
-        fontSize: 14,
-        color: COLORS.textMuted,
-        fontWeight: '500',
-        alignSelf: 'flex-end',
+      color: COLORS.textSecondary,
+      fontSize: 16,
+      fontWeight: '500',
     },
 
-    // --- Seller Info (SellerInfo) ---
+    // --- SellerInfo ---
     ownerSection: {
         flexDirection: 'row',
-        alignItems: 'center',
         justifyContent: 'space-between',
+        alignItems: 'center',
         backgroundColor: COLORS.card,
-        borderRadius: 16,
-        padding: 16,
+        padding: 12,
+        borderRadius: 12,
     },
     ownerInfoContainer: {
         flexDirection: 'row',
@@ -878,37 +923,40 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.border,
     },
     ownerName: {
-        color: COLORS.textPrimary,
         fontSize: 16,
         fontWeight: '600',
+        color: COLORS.textPrimary,
     },
     ownerStatus: {
-        color: COLORS.textMuted,
-        fontSize: 12,
-        marginTop: 2,
+        fontSize: 13,
+        color: COLORS.textSecondary, // <-- Ganti warna
+        fontWeight: '500',
     },
     chatButton: {
-        backgroundColor: COLORS.primary,
-        width: 48,
-        height: 48,
-        borderRadius: 12,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: COLORS.card, // <-- Ganti warna
         justifyContent: 'center',
         alignItems: 'center',
+        borderWidth: 1,
+        borderColor: COLORS.primary,
     },
-
-    // --- Review List (ReviewList) ---
+    
+    // --- ReviewList ---
     reviewSectionHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: 16,
-        marginTop: 8,
     },
     reviewCard: {
         backgroundColor: COLORS.card,
         borderRadius: 12,
         padding: 16,
         marginBottom: 12,
+        borderWidth: 1,
+        borderColor: COLORS.border,
     },
     reviewHeader: {
         flexDirection: 'row',
@@ -921,14 +969,20 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         marginRight: 12,
         backgroundColor: COLORS.border,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     reviewUserInfo: {
         flex: 1,
     },
     reviewUserName: {
         color: COLORS.textPrimary,
+        fontSize: 15,
         fontWeight: '600',
-        fontSize: 14,
+    },
+    reviewDate: {
+      color: COLORS.textMuted,
+      fontSize: 12,
     },
     starRatingContainer: {
         flexDirection: 'row',
@@ -940,96 +994,100 @@ const styles = StyleSheet.create({
     reviewComment: {
         color: COLORS.textSecondary,
         fontSize: 14,
-        lineHeight: 20,
+        lineHeight: 21,
     },
     noReviewsText: {
         color: COLORS.textMuted,
         textAlign: 'center',
-        fontSize: 14,
-        marginVertical: 20,
+        fontStyle: 'italic',
+        marginTop: 10,
     },
     loadingIndicator: {
         marginVertical: 20,
     },
 
-    // --- Add Review (AddReviewForm) ---
+    // --- AddReviewForm ---
     addReviewContainer: {
         backgroundColor: COLORS.card,
         borderRadius: 12,
         padding: 16,
+        borderWidth: 1,
+        borderColor: COLORS.border,
     },
     addReviewLabel: {
-        color: COLORS.textPrimary,
-        fontSize: 16,
-        fontWeight: '600',
-        marginBottom: 12,
+        color: COLORS.textSecondary,
+        fontSize: 14,
+        fontWeight: '500',
+        textAlign: 'center',
     },
     commentLabelMargin: {
         marginTop: 20,
+        marginBottom: 12,
+        textAlign: 'left',
     },
     interactiveStarsContainer: {
         flexDirection: 'row',
+        justifyContent: 'center',
+        marginVertical: 12,
     },
     interactiveStar: {
-        marginRight: 10,
+        marginHorizontal: 8,
     },
     commentInput: {
         backgroundColor: COLORS.background,
         borderColor: COLORS.border,
         borderWidth: 1,
         borderRadius: 8,
-        height: 100,
-        padding: 12,
-        fontSize: 14,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        fontSize: 15,
         color: COLORS.textPrimary,
+        minHeight: 100,
+        textAlignVertical: 'top',
     },
     submitButton: {
         backgroundColor: COLORS.primary,
+        paddingVertical: 12,
         borderRadius: 8,
-        padding: 14,
         alignItems: 'center',
         marginTop: 16,
+    },
+    submitButtonDisabled: {
+      backgroundColor: COLORS.textMuted,
     },
     submitButtonText: {
         color: 'white',
         fontSize: 16,
         fontWeight: '600',
     },
-
-    // --- Footer (DetailFooter) ---
+    
+    // --- DetailFooter ---
     footerContainer: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: COLORS.background, // Konsisten
+        backgroundColor: COLORS.card,
         borderTopWidth: 1,
         borderColor: COLORS.border,
     },
     footer: {
         paddingHorizontal: 16,
-        paddingTop: 12,
-        // Padding bottom akan ditangani oleh SafeAreaView
+        paddingVertical: 12,
     },
     actionButtonsContainerFull: {
         flexDirection: 'row',
-        alignItems: 'center',
     },
     cartButton: {
-        width: 50,
+        width: 56,
         height: 50,
-        borderRadius: 12,
-        backgroundColor: COLORS.card,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 12,
+        borderRadius: 12,
         borderWidth: 1,
         borderColor: COLORS.primary,
+        marginRight: 12,
     },
     rentButtonFull: {
         flex: 1,
-        height: 50,
         backgroundColor: COLORS.primary,
+        height: 50,
         borderRadius: 12,
         justifyContent: 'center',
         alignItems: 'center',
@@ -1040,35 +1098,36 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
 
-    // --- Modal (RentalModal) ---
+    // --- RentalModal ---
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.6)',
         justifyContent: 'flex-end',
     },
     modalContent: {
-        backgroundColor: COLORS.background,
+        backgroundColor: COLORS.card,
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
         padding: 16,
+        paddingBottom: 30, // Padding untuk safe area
     },
     modalCloseHeader: {
         alignItems: 'flex-end',
-        marginBottom: 8,
+        marginBottom: 10,
     },
     closeButtonIcon: {
-        padding: 8, // Area sentuh lebih besar
+        padding: 8,
     },
     productInfoRow: {
         flexDirection: 'row',
         alignItems: 'flex-start',
     },
     modalProductImage: {
-        width: 100,
-        height: 100,
-        borderRadius: 8,
-        backgroundColor: COLORS.border,
+        width: 90,
+        height: 90,
+        borderRadius: 12,
         marginRight: 16,
+        backgroundColor: COLORS.border,
     },
     modalPriceStockContainer: {
         flex: 1,
@@ -1096,29 +1155,13 @@ const styles = StyleSheet.create({
     durationInputLabel: {
         color: COLORS.textPrimary,
         fontSize: 16,
-        fontWeight: '500',
+        fontWeight: '600',
     },
-    modalConfirmButton: {
-        backgroundColor: COLORS.primary,
-        borderRadius: 8,
-        padding: 16,
-        alignItems: 'center',
-        marginBottom: Platform.OS === 'ios' ? 20 : 0, // Padding bawah untuk iPhone
-    },
-    modalConfirmButtonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
-
-    // --- Stepper Component ---
     stepperContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: COLORS.card,
+        backgroundColor: COLORS.background,
         borderRadius: 8,
-        borderWidth: 1,
-        borderColor: COLORS.border,
     },
     stepperButton: {
         width: 40,
@@ -1127,12 +1170,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     stepperButtonDisabled: {
-        // backgroundColor: COLORS.border, // Opsional
+        // backgroundColor: COLORS.border,
     },
     stepperText: {
         color: COLORS.primary,
-        fontSize: 22,
-        fontWeight: 'bold',
+        fontSize: 24,
+        fontWeight: '600',
     },
     stepperTextDisabled: {
         color: COLORS.textMuted,
@@ -1143,5 +1186,16 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         minWidth: 40,
         textAlign: 'center',
+    },
+    modalConfirmButton: {
+        backgroundColor: COLORS.primary,
+        padding: 16,
+        borderRadius: 12,
+        alignItems: 'center',
+    },
+    modalConfirmButtonText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: 'bold',
     },
 });
