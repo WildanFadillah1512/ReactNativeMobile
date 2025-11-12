@@ -1,5 +1,3 @@
-// File: src/screens/SavedScreen.tsx (FINAL - No ESLint Warning + Auto Refresh)
-
 import React, { useMemo, useState, useCallback } from 'react';
 import {
     View,
@@ -34,6 +32,7 @@ interface SavedItemCardProps {
     onPress: (item: ApiProduct) => void;
 }
 
+// Komponen Card (Sudah Benar)
 const SavedItemCard: React.FC<SavedItemCardProps> = ({ item, onUnlike, onPress }) => (
     <TouchableOpacity
         style={styles.card}
@@ -101,6 +100,8 @@ const SavedItemCard: React.FC<SavedItemCardProps> = ({ item, onUnlike, onPress }
 // --- Komponen Utama ---
 export default function SavedScreen({ navigation }: SavedScreenProps) {
     const { likedIds, toggleLike, isLoading: likesLoading } = useLikes();
+    
+    // Inisialisasi state sebagai array kosong (Sudah benar)
     const [allApiProducts, setAllApiProducts] = useState<ApiProduct[]>([]);
     const [isLoadingApi, setIsLoadingApi] = useState(true);
 
@@ -109,7 +110,10 @@ export default function SavedScreen({ navigation }: SavedScreenProps) {
         try {
             setIsLoadingApi(true);
             const response = await apiClient.get('/products');
-            setAllApiProducts(response.data);
+            
+            // --- PERBAIKAN: Ambil array 'products' dari dalam data respons ---
+            setAllApiProducts(response.data.products || []);
+
         } catch (error: any) {
             console.error('Gagal fetch semua produk:', error);
             const errorMessage = error.message || 'Gagal memuat data produk.';
@@ -124,34 +128,35 @@ export default function SavedScreen({ navigation }: SavedScreenProps) {
         } finally {
             setIsLoadingApi(false);
         }
-    }, []); // ⬅️ Tidak ada dependency (karena tidak pakai variabel luar)
+    }, []); 
 
-    // Auto refresh saat layar difokuskan
+    // Auto refresh saat layar difokuskan (Sudah benar)
     useFocusEffect(
         useCallback(() => {
             fetchAllProducts();
         }, [fetchAllProducts])
     );
 
-    // Filter produk yang disimpan
+    // Filter produk yang disimpan (Sekarang aman karena allApiProducts selalu array)
     const savedItems = useMemo(
         () => allApiProducts.filter((item) => likedIds.includes(item.id)),
         [likedIds, allApiProducts]
     );
 
-    // Handler untuk unlike
+    // Handler untuk unlike (Sudah benar)
     const handleUnlike = async (id: number) => {
         try {
             await toggleLike(id);
             // Refresh data agar langsung update
-            fetchAllProducts();
+            // fetchAllProducts(); // --> Ini efektif, tapi mungkin sedikit lambat
+            // Alternatif: Cukup update state lokal jika ingin lebih cepat
         } catch (error) {
             console.error('Gagal unlike:', error);
             Alert.alert('Gagal', 'Tidak dapat menghapus dari simpanan.');
         }
     };
 
-    // Navigasi ke detail produk
+    // Navigasi ke detail produk (Sudah benar)
     const handleNavigateToDetail = (item: ApiProduct) => {
         navigation.navigate('Detail', { productId: item.id });
     };
@@ -224,6 +229,7 @@ export default function SavedScreen({ navigation }: SavedScreenProps) {
 }
 
 // --- Style ---
+// (Tidak ada perubahan pada Styles)
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: COLORS.background },
     header: {

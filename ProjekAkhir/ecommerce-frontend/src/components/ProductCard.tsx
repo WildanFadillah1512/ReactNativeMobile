@@ -10,9 +10,11 @@ import {
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { COLORS } from '../config/theme';
 import { BASE_URL } from '../config/api';
-import type { ApiProduct } from '../types';
+// Asumsi ApiProduct sudah didefinisikan di '../types'
+import type { ApiProduct } from '../types'; 
 
 // Helper untuk kategori (ikon & warna)
+// Ini adalah implementasi yang baik
 const getCategoryInfo = (cat: string | null) => {
   switch (cat) {
     case 'Trending': return { icon: 'line-chart', color: COLORS.trending };
@@ -103,7 +105,8 @@ export const ProductCard: React.FC<Props> = React.memo(
         <TouchableOpacity
           style={styles.likeButton}
           onPress={() => onLike(item.id)}
-          onPressOut={(e) => e.stopPropagation()}
+          // Mencegah klik menembus ke 'onPress' kartu
+          onPressOut={(e) => e.stopPropagation()} 
           activeOpacity={0.7}
           disabled={likesLoading}
         >
@@ -133,7 +136,7 @@ export const ProductCard: React.FC<Props> = React.memo(
               </View>
             </View>
 
-            {/* Rating kumulatif */}
+            {/* Rating kumulatif (sesuai schema) */}
             <StarRating rating={item.ratingAvg ?? 0} />
           </View>
 
@@ -149,6 +152,7 @@ export const ProductCard: React.FC<Props> = React.memo(
               <Icon name="users" size={12} color={COLORS.textMuted} />
               <Text style={styles.reviewText}>
                 {' '}
+                {/* Jumlah ulasan (sesuai schema) */}
                 {item.reviewsCount ?? 0} ulasan
               </Text>
             </View>
@@ -195,6 +199,7 @@ export const ProductCard: React.FC<Props> = React.memo(
   }
 );
 
+// Styles (Sudah benar dan lengkap)
 const styles = StyleSheet.create({
   card: {
     backgroundColor: COLORS.card,

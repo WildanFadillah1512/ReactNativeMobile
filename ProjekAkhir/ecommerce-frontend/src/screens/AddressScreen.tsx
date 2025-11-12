@@ -139,7 +139,7 @@ export default function AddressScreen({ route, navigation }: AddressScreenProps)
   
   // --- FIX 2 & 3: Bungkus 'handleEdit' dengan 'useCallback' & fix parameter ---
   const handleEdit = useCallback((_address: Address) => { // <-- Ganti 'address'
-     Alert.alert("Fitur \"Edit\" belum dibuat", "Kita perlu API PUT /api/addresses/:id dulu.");
+     Alert.alert("Fitur \"Edit\" belum dibuat", "Kita perlu API PUT /addresses/:id dulu.");
      // navigation.navigate('EditAddress', { address: _address });
   }, []); // <-- Tidak ada dependensi
 
@@ -341,4 +341,3 @@ const styles = StyleSheet.create({
     height: 16,
   },
 });
-

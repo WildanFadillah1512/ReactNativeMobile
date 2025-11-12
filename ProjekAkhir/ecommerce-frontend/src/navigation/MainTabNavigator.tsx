@@ -1,11 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native'; 
+// Hapus 'View', 'Text', 'StyleSheet' karena sudah tidak dipakai
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import Icon from 'react-native-vector-icons/FontAwesome'; 
-import { COLORS } from '../config/theme'; 
+import Icon from 'react-native-vector-icons/FontAwesome';
+import { COLORS } from '../config/theme';
 
 // --- 1. IMPOR TIPE ---
-import { type MainTabParamList } from './types'; 
+import { type MainTabParamList } from './types';
 // --- IMPOR BARU UNTUK TIPE ROUTE ---
 import type { RouteProp } from '@react-navigation/native';
 
@@ -13,17 +13,15 @@ import type { RouteProp } from '@react-navigation/native';
 import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import NotificationScreen from '../screens/NotificationScreen';
-// import ExploreScreen from '../screens/ExploreScreen';
+// Ini adalah screen asli yang kita buat
+import ExploreScreen from '../screens/ExploreScreen';
 
 // --- 2. BERIKAN TIPE KE NAVIGATOR ---
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-// Komponen placeholder (Sudah benar di luar)
-const ExploreScreenPlaceholder = () => (
-  <View style={styles.placeholderContainer}> 
-    <Text>Explore Screen</Text>
-  </View>
-);
+// --- PERUBAHAN 1: Hapus ExploreScreenPlaceholder ---
+// (Placeholder dihapus dari sini)
+
 type ScreenOptionsProps = {
   route: RouteProp<MainTabParamList, keyof MainTabParamList>;
 };
@@ -35,13 +33,11 @@ type TabBarIconProps = {
   size: number;
 };
 
+// Fungsi ini sudah benar
 const getScreenOptions = ({ route }: ScreenOptionsProps) => ({
-  // 'tabBarIcon' masih sebuah fungsi, tapi ini adalah pola yang
-  // diterima React Navigation. Linter sekarang seharusnya puas
-  // karena 'getScreenOptions' (induknya) sudah stabil.
-  tabBarIcon: ({ focused, color, size: _size }: TabBarIconProps) => { 
-    let iconName: string; 
-    const iconSize = focused ? 26 : 22; 
+  tabBarIcon: ({ focused, color, size: _size }: TabBarIconProps) => {
+    let iconName: string;
+    const iconSize = focused ? 26 : 22;
 
     switch (route.name) {
       case 'Home':
@@ -59,14 +55,14 @@ const getScreenOptions = ({ route }: ScreenOptionsProps) => ({
     }
     return <Icon name={iconName} size={iconSize} color={color} />;
   },
-  
+
   // Opsi lainnya tetap sama
   headerShown: false,
   tabBarActiveTintColor: COLORS.primary,
   tabBarInactiveTintColor: COLORS.textMuted,
   tabBarShowLabel: true,
   tabBarStyle: {
-    backgroundColor: COLORS.background, 
+    backgroundColor: COLORS.background,
     borderTopColor: COLORS.border,
   },
 });
@@ -77,25 +73,26 @@ export default function MainTabNavigator() {
   return (
     <Tab.Navigator
       // --- 4. GUNAKAN REFERENSI FUNGSI YANG STABIL ---
-      screenOptions={getScreenOptions} 
+      screenOptions={getScreenOptions}
     >
-      <Tab.Screen 
-        name="Home" 
-        component={HomeScreen} 
-        options={{ title: 'Home' }} 
+      <Tab.Screen
+        name="Home"
+        component={HomeScreen}
+        options={{ title: 'Home' }}
       />
-      <Tab.Screen 
-        name="Explore" 
-        component={ExploreScreenPlaceholder} 
+      <Tab.Screen
+        name="Explore"
+        // --- PERUBAHAN 2: Ganti komponen placeholder ---
+        component={ExploreScreen} 
         options={{ title: 'Explorer' }}
       />
-      <Tab.Screen 
-        name="Notifications" 
+      <Tab.Screen
+        name="Notifications"
         component={NotificationScreen}
         options={{ title: 'Notif' }}
       />
-      <Tab.Screen 
-        name="Profile" 
+      <Tab.Screen
+        name="Profile"
         component={ProfileScreen}
         options={{ title: 'Profile' }}
       />
@@ -103,10 +100,5 @@ export default function MainTabNavigator() {
   );
 }
 
-const styles = StyleSheet.create({
-  placeholderContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center'
-  }
-});
+// --- PERUBAHAN 3: Hapus 'styles' yang tidak terpakai ---
+// (StyleSheet.create dihapus dari sini)

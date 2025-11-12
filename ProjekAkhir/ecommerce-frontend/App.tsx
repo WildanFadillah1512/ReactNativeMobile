@@ -3,12 +3,13 @@ import { StatusBar } from 'react-native';
 // Import provider Anda yang sudah ada
 import { AddressProvider } from './src/context/AddressContext';
 import { ChatProvider } from './src/context/ChatContext';
-import { ReviewProvider } from './src/context/ReviewContext';
 import { LikeProvider } from './src/context/LikeContext';
 import { CartProvider } from './src/context/CartContext';
-
-// 1. IMPORT AUTH PROVIDER BARU ANDA
 import { AuthProvider } from './src/context/AuthContext';
+
+// --- 1. [BARU] Impor Provider Socket & Notifikasi ---
+import { SocketProvider } from './src/context/SocketContext';
+import { NotificationProvider } from './src/context/NotificationContext';
 
 // Import navigator Anda
 import RootNavigator from './src/navigation/RootNavigator';
@@ -16,19 +17,24 @@ import RootNavigator from './src/navigation/RootNavigator';
 
 export default function App() {
     return (
+        // AuthProvider membungkus semua
         <AuthProvider>
-            <CartProvider>
-                <LikeProvider>
-                    <ChatProvider>
-                        <AddressProvider>
-                            <ReviewProvider>
-                                <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
-                                <RootNavigator />                  
-                            </ReviewProvider>
-                        </AddressProvider>
-                    </ChatProvider>
-                </LikeProvider>
-            </CartProvider>
+            {/* SocketProvider membutuhkan AuthProvider */}
+            <SocketProvider>
+                {/* NotificationProvider membutuhkan SocketProvider */}
+                <NotificationProvider>
+                    <CartProvider>
+                        <LikeProvider>
+                            <ChatProvider>
+                                <AddressProvider>
+                                    <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
+                                    <RootNavigator />
+                                </AddressProvider>
+                            </ChatProvider>
+                        </LikeProvider>
+                    </CartProvider>
+                </NotificationProvider>
+            </SocketProvider>
         </AuthProvider>
     );
 }

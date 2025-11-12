@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   Alert,
   SafeAreaView,
-  // ScrollView, // <-- Tidak terpakai, diganti SectionList
   StatusBar,
   SectionList,
 } from 'react-native';
@@ -20,12 +19,17 @@ import { useNavigation, useIsFocused } from '@react-navigation/native';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { type RootStackParamList, type MainTabParamList } from '../navigation/types';
+// --- 1. [PENYESUAIAN] Impor tipe navigasi Root ---
+import { 
+  type RootStackParamList, 
+  type MainTabParamList,
+  type RootStackNavigationProp // Impor tipe helper navigasi
+} from '../navigation/types'; 
 
 import { useAuth } from '../context/AuthContext';
 import apiClient from '../config/api'; 
 import { COLORS } from '../config/theme';
-import type { RootStackNavigationProp } from '../navigation/types';
+// Hapus: import type { RootStackNavigationProp } from '../navigation/types';
 
 // Tipe data
 type ApiUser = {
@@ -80,10 +84,8 @@ const MenuItem: React.FC<{
   </TouchableOpacity>
 );
 
-// --- PERBAIKAN LINTER: Buat referensi komponen yang stabil ---
 const renderItemSeparator = () => <View style={styles.divider} />;
 const renderSectionSeparator = () => <View style={styles.sectionSeparator} />;
-// -----------------------------------------------------------
 
 // --- Tipe Props (Sudah Benar) ---
 type ProfileScreenProps = CompositeScreenProps<
@@ -97,6 +99,11 @@ type ProfileScreenProps = CompositeScreenProps<
 export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const { isLoggedIn, logout } = useAuth();
   const isFocused = useIsFocused();
+  
+  // --- 2. [PENYESUAIAN] Gunakan tipe navigasi yang benar ---
+  // Kita gunakan 'navigation' dari props untuk navigasi antar tab,
+  // tapi kita juga bisa gunakan 'useNavigation' untuk navigasi stack.
+  const stackNavigation = useNavigation<RootStackNavigationProp>();
 
   const [user, setUser] = useState<ApiUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -111,8 +118,6 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
       console.error('Gagal memuat profil:', error);
       if ((error as any).response?.status === 401) {
         await logout();
-      } else {
-        // Jangan tampilkan alert, cukup log
       }
     } finally {
       setIsLoading(false);
@@ -145,7 +150,8 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
     );
   };
 
-  // --- Data untuk SectionList (Sudah Benar) ---
+  // --- 3. [PENYESUAIAN] Data untuk SectionList ---
+  // Menggunakan 'stackNavigation' untuk pindah layar
   const menuSections = [
     {
       title: 'Akun Saya',
@@ -154,19 +160,21 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           key: 'address',
           icon: 'map-pin',
           text: 'Alamat Pengiriman',
-          onPress: () => navigation.navigate('Address', { items: [] }),
+          // 'items: []' adalah placeholder jika AddressScreen membutuhkannya
+          onPress: () => stackNavigation.navigate('Address', { items: [] }), 
         },
         {
           key: 'saved',
           icon: 'heart',
           text: 'Barang Tersimpan',
-          onPress: () => navigation.navigate('Saved'),
+          onPress: () => stackNavigation.navigate('Saved'),
         },
         {
           key: 'history',
-          icon: 'file-text',
+          icon: 'file-text', // Anda bisa ganti ke 'history' dari FontAwesome
           text: 'Riwayat Sewa',
-          onPress: () => Alert.alert('Segera Hadir', 'Halaman riwayat sewa sedang disiapkan.'),
+          // --- INI PERUBAHANNYA ---
+          onPress: () => stackNavigation.navigate('RentalHistory'),
         },
       ],
     },
@@ -177,14 +185,15 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           key: 'notifications',
           icon: 'bell',
           text: 'Notifikasi',
+          // 'navigation.navigate' di sini akan pindah tab
           onPress: () => navigation.navigate('Notifications'),
         },
         {
           key: 'support',
           icon: 'message-circle',
           text: 'Pusat Bantuan',
-          onPress: () => navigation.navigate('Chat', {
-            sellerId: 999,
+          onPress: () => stackNavigation.navigate('Chat', {
+            sellerId: 999, // ID khusus untuk Support
             sellerName: 'PakeSewa Support',
           }),
         },
@@ -215,7 +224,6 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
         sections={menuSections}
         keyExtractor={(item) => item.key}
         contentContainerStyle={styles.scrollContainer}
-        // --- PERBAIKAN LINTER: Gunakan style dari StyleSheet ---
         ListHeaderComponentStyle={styles.listHeader} 
         
         // --- Header Pengguna ---
@@ -249,10 +257,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           />
         )}
         
-        // --- PERBAIKAN LINTER: Gunakan referensi stabil ---
         ItemSeparatorComponent={renderItemSeparator}
-        
-        // --- PERBAIKAN LINTER: Gunakan referensi stabil ---
         SectionSeparatorComponent={renderSectionSeparator}
         
         // --- Tombol Logout di Paling Bawah ---
@@ -267,9 +272,8 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   );
 }
 
-// --- STYLESHEET (Dengan tambahan) ---
+// --- STYLESHEET (Tidak ada perubahan) ---
 const styles = StyleSheet.create({
-  // --- Container Utama ---
   safeArea: {
     flex: 1,
     backgroundColor: COLORS.background,
@@ -290,13 +294,9 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     paddingHorizontal: 16, 
   },
-  
-  // --- PERBAIKAN LINTER: Style untuk ListHeader ---
   listHeader: {
-    paddingTop: 0, // <-- Memindahkan inline style ke sini
+    paddingTop: 0,
   },
-
-  // --- Tampilan Full Screen ---
   fullScreenCenter: {
     flex: 1,
     justifyContent: 'center',
@@ -304,8 +304,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
     padding: 16,
   },
-
-  // --- Header Profil (ListHeaderComponent) ---
   profileHeader: {
     backgroundColor: COLORS.card,
     borderRadius: 16,
@@ -340,8 +338,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: COLORS.background,
   },
-  
-  // --- Seksi & Item Menu ---
   sectionTitle: {
     fontSize: 14,
     fontWeight: '600',
@@ -379,8 +375,6 @@ const styles = StyleSheet.create({
   sectionSeparator: {
     height: 16, 
   },
-
-  // --- Tombol Logout (ListFooterComponent) ---
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -396,8 +390,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 12,
   },
-  
-  // --- Tampilan Logged Out ---
   loggedOutCard: {
     width: '100%',
     backgroundColor: COLORS.card,
@@ -437,4 +429,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-})
+});

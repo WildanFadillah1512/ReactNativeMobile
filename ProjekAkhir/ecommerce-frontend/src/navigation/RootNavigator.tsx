@@ -2,16 +2,16 @@ import React from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+
+// 1. Mengimpor hook 'useAuth'
 import { useAuth } from '../context/AuthContext';
 
-// --- 1. IMPOR TAB NAVIGATOR BARU ---
+// 2. Impor Tab Navigator
 import MainTabNavigator from './MainTabNavigator';
 
-// --- 2. IMPOR LAYAR AUTH & LAYAR NON-TAB LAINNYA ---
+// 3. Impor semua layar aplikasi lainnya
 import { LoginScreen } from '../screens/LoginScreen';
 import { RegisterScreen } from '../screens/RegisterScreen';
-// HomeScreen, NotificationScreen, & ProfileScreen DIHAPUS dari sini
-// karena mereka sudah ada di dalam MainTabNavigator
 import DetailScreen from '../screens/DetailScreen';
 import CheckoutScreen from '../screens/CheckoutScreen';
 import AddressScreen from '../screens/AddressScreen';
@@ -26,12 +26,17 @@ import CartScreen from '../screens/CartScreen';
 import SearchHistoryScreen from '../screens/SearchHistoryScreen';
 import SearchResultsScreen from '../screens/SearchResultsScreen';
 
+// --- [BARU] Impor layar Riwayat Sewa ---
+import RentalHistoryScreen from '../screens/RentalHistoryScreen';
+
+// 4. Impor tipe Root Stack
 import type { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function RootNavigator() {
   const { isLoading } = useAuth();
+
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -39,28 +44,23 @@ export default function RootNavigator() {
       </View>
     );
   }
+
   return (
     <NavigationContainer>
       <Stack.Navigator
-        // --- 3. UBAH INITIAL ROUTE KE "Main" ---
-        initialRouteName="Main" 
+        initialRouteName="Main"
         screenOptions={{
           headerShown: false,
         }}>
+        
+        {/* GRUP 1: LAYAR APLIKASI UTAMA */}
         <Stack.Group
           screenOptions={{
             animation: 'slide_from_right',
           }}>
           
-          {/* --- 4. DAFTARKAN TAB NAVIGATOR SEBAGAI SATU LAYAR --- */}
           <Stack.Screen name="Main" component={MainTabNavigator} />
           
-          {/* --- 5. HAPUS LAYAR YANG SUDAH PINDAH KE TAB --- */}
-          {/* <Stack.Screen name="Home" component={HomeScreen} /> */}
-          {/* <Stack.Screen name="Notifications" component={NotificationScreen} /> */}
-          {/* <Stack.Screen name="Profile" component={ProfileScreen} /> */}
-
-          {/* --- 6. SISAKAN SEMUA LAYAR NON-TAB DI SINI --- */}
           <Stack.Screen name="SearchHistory" component={SearchHistoryScreen} />
           <Stack.Screen name="SearchResults" component={SearchResultsScreen} />
           <Stack.Screen name="Detail" component={DetailScreen} />
@@ -74,11 +74,13 @@ export default function RootNavigator() {
           <Stack.Screen name="AllReviews" component={AllReviewsScreen} />
           <Stack.Screen name="Saved" component={SavedScreen} />
           <Stack.Screen name="Cart" component={CartScreen} />
-          {/* Screen Notifikasi ada di Tab, jadi hapus dari sini jika ada */}
+
+          {/* --- [BARU] Daftarkan layar Riwayat Sewa --- */}
+          <Stack.Screen name="RentalHistory" component={RentalHistoryScreen} />
           
         </Stack.Group>
         
-        {/* Grup Modal Anda sudah benar */}
+        {/* GRUP 2: LAYAR MODAL (AUTENTIKASI) */}
         <Stack.Group screenOptions={{ presentation: 'modal' }}>
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
@@ -88,11 +90,12 @@ export default function RootNavigator() {
     </NavigationContainer>
   );
 }
+
 const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: '#ffffff', // Ganti dengan warna background tema Anda
   },
 });

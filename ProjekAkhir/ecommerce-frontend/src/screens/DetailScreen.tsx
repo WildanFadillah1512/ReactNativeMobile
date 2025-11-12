@@ -6,15 +6,15 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import FeatherIcon from 'react-native-vector-icons/Feather'; // <-- Impor FeatherIcon
+import FeatherIcon from 'react-native-vector-icons/Feather';
 import { useRoute, useNavigation, type RouteProp } from '@react-navigation/native';
-import { RootStackParamList, RootStackNavigationProp } from '../navigation/types';
-// HAPUS: import { useReviews } from '../context/ReviewContext'; // <-- HAPUS CONTEXT DUMMY
+// --- [PERBAIKAN] Impor tipe CheckoutRentalItem ---
+import { RootStackParamList, RootStackNavigationProp, } from '../navigation/types';
+import type { CheckoutRentalItem } from '../types'; // Pastikan CheckoutRentalItem diimpor dari sini
 import { useLikes } from '../context/LikeContext';
 import { useCart } from '../context/CartContext';
 import { formatCurrency } from '../utils/riceParse';
-// HAPUS: import type { CheckoutRentalItem, ApiProduct, ApiSeller, Review } from '../types';
-import type { CheckoutRentalItem, ApiProduct, ApiSeller } from '../types'; // <-- Hapus 'Review'
+import type { ApiProduct, ApiSeller } from '../types';
 import { COLORS } from '../config/theme';
 import apiClient, { BASE_URL } from '../config/api';
 import { useAuth } from '../context/AuthContext';
@@ -25,7 +25,6 @@ const MAX_DURATION = 30;
 // --- TYPES ---
 type DetailRouteProp = RouteProp<RootStackParamList, 'Detail'>;
 
-// --- 1. DEFINISIKAN TIPE ULASAN SESUAI API ---
 type ApiReview = {
   id: number;
   rating: number;
@@ -39,33 +38,37 @@ type ApiReview = {
 
 // --- HELPER FUNCTIONS & COMPONENTS ---
 
-// buildImageUri (Sudah Benar)
 const buildImageUri = (filename?: string | null): string | null => {
   if (!filename) return null;
   if (filename.startsWith('http://') || filename.startsWith('https://')) return filename;
   return `${BASE_URL}/images/${filename}`;
 };
 
-// mapApiProductToCheckoutItem (Disesuaikan untuk Rating Baru)
+// =================================================================
+// === 🚀 [PERBAIKAN 1] Tambahkan properti yang hilang
+// =================================================================
 const mapApiProductToCheckoutItem = (
     product: ApiProduct,
     duration: number,
     productImageUri: string | null
 ): CheckoutRentalItem => {
   return {
-      ...product,
+      id: product.id,
+      name: product.name,
       price: formatCurrency(product.price),
       image: productImageUri ? { uri: productImageUri } : require('../assets/images/placeholder.png'),
       duration: duration,
       category: product.category ?? 'Lainnya',
       location: product.location ?? 'Lokasi tidak diketahui',
-      period: product.period ?? '',
-      // --- 2. SESUAIKAN DENGAN SKEMA BARU ---
-      rating: product.ratingAvg ?? 0,   // <-- Ganti 'rating'
-      reviews: product.reviewsCount ?? 0, // <-- Ganti 'reviews'
-      // ---------------------------------
+      period: product.period ?? '/hari',
+      rating: product.ratingAvg ?? 0,
+      reviews: product.reviewsCount ?? 0,
+      
+      // --- [FIX] Tambahkan properti yang hilang ---
+      description: product.description ?? '', // Tambahkan description
+      trending: product.trending ?? false,   // Tambahkan trending
+      
       seller: {
-          ...product.seller,
           id: product.seller?.id ?? 0,
           name: product.seller?.name ?? 'Penjual',
           avatar: product.seller?.avatar ?? '',
@@ -76,7 +79,7 @@ const mapApiProductToCheckoutItem = (
   };
 };
 
-// StarRating (Sudah Benar)
+// StarRating
 const StarRating: React.FC<{ rating: number }> = React.memo(({ rating }) => (
     <View style={styles.starRatingContainer}>
       {Array.from({ length: 5 }).map((_, index) => (
@@ -91,7 +94,7 @@ const StarRating: React.FC<{ rating: number }> = React.memo(({ rating }) => (
     </View>
 ));
 
-// InteractiveStarRating (Sudah Benar)
+// InteractiveStarRating
 const InteractiveStarRating: React.FC<{ rating: number; onRatingChange: (r: number) => void; size?: number }> = React.memo(({
     rating,
     onRatingChange,
@@ -106,7 +109,7 @@ const InteractiveStarRating: React.FC<{ rating: number; onRatingChange: (r: numb
     </View>
 ));
 
-// Stepper (Sudah Benar)
+// Stepper
 const Stepper: React.FC<{ value: number; onIncrement: () => void; onDecrement: () => void; min: number; max: number }> = React.memo(({
     value,
     onIncrement,
@@ -125,7 +128,7 @@ const Stepper: React.FC<{ value: number; onIncrement: () => void; onDecrement: (
     </View>
 ));
 
-// DetailHeader (Sudah Benar)
+// DetailHeader
 const DetailHeader: React.FC<{
     imageUri: string | null;
     isLiked: boolean;
@@ -162,17 +165,15 @@ const DetailHeader: React.FC<{
     );
 });
 
-// ProductInfo (Disesuaikan untuk Rating Kumulatif)
+// ProductInfo
 const ProductInfo: React.FC<{ product: ApiProduct; pricePerDay: number }> = React.memo(({ product, pricePerDay }) => (
     <>
         <View style={styles.titleSection}>
             <Text style={styles.title} numberOfLines={2}>{product.name}</Text>
             <View style={styles.ratingBox}>
                 <Icon name="star" size={14} color={COLORS.starActive} />
-                {/* --- 3. SESUAIKAN DENGAN SKEMA BARU --- */}
                 <Text style={styles.ratingText}>{Number(product.ratingAvg ?? 0).toFixed(1)}</Text>
                 <Text style={styles.reviewCountText}>({product.reviewsCount ?? 0})</Text>
-                {/* --------------------------------- */}
             </View>
         </View>
 
@@ -191,7 +192,7 @@ const ProductInfo: React.FC<{ product: ApiProduct; pricePerDay: number }> = Reac
     </>
 ));
 
-// SellerInfo (Sudah Benar)
+// SellerInfo
 const SellerInfo: React.FC<{
     seller: ApiSeller | null;
     sellerAvatarUri: string | null;
@@ -226,9 +227,9 @@ const SellerInfo: React.FC<{
     );
 });
 
-// ReviewList (Disesuaikan untuk Data API)
+// ReviewList
 const ReviewList: React.FC<{
-    reviews: ApiReview[]; // <-- 4. Gunakan Tipe ApiReview
+    reviews: ApiReview[];
     allReviewsCount: number;
     isLoading: boolean;
     onViewAll: () => void;
@@ -249,7 +250,6 @@ const ReviewList: React.FC<{
             reviews.map((review) => (
                 <View key={review.id} style={styles.reviewCard}>
                     <View style={styles.reviewHeader}>
-                        {/* --- 5. SESUAIKAN DENGAN SKEMA BARU --- */}
                         <View style={styles.reviewAvatar}>
                           <FeatherIcon name="user" size={20} color={COLORS.textMuted} />
                         </View>
@@ -260,7 +260,6 @@ const ReviewList: React.FC<{
                         <Text style={styles.reviewDate}>
                           {new Date(review.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
                         </Text>
-                        {/* --------------------------------- */}
                     </View>
                     <Text style={styles.reviewComment}>{review.comment || 'Tidak ada komentar.'}</Text>
                 </View>
@@ -271,11 +270,11 @@ const ReviewList: React.FC<{
     </>
 ));
 
-// AddReviewForm (Sudah Benar)
+// AddReviewForm
 const AddReviewForm: React.FC<{
     rating: number;
     comment: string;
-    isSubmitting: boolean; // <-- 6. Tambahkan state 'isSubmitting'
+    isSubmitting: boolean;
     onRatingChange: (rating: number) => void;
     onCommentChange: (comment: string) => void;
     onSubmit: () => void;
@@ -309,7 +308,7 @@ const AddReviewForm: React.FC<{
     </View>
 ));
 
-// DetailFooter (Sudah Benar)
+// DetailFooter
 const DetailFooter: React.FC<{
     onAddToCart: () => void;
     onRent: () => void;
@@ -328,7 +327,7 @@ const DetailFooter: React.FC<{
     </SafeAreaView>
 ));
 
-// RentalModal (Sudah Benar)
+// RentalModal
 const RentalModal: React.FC<{
     visible: boolean;
     onClose: () => void;
@@ -412,14 +411,12 @@ export default function DetailScreen() {
     const { productId } = route.params;
     const { likedIds, toggleLike } = useLikes();
     const { addToCart } = useCart();
-    // HAPUS: const { getReviewsForItem, addReviewForItem, loading: reviewsLoading } = useReviews();
-
+    
     // --- State for Data Fetching ---
     const [product, setProduct] = useState<ApiProduct | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     
-    // --- 7. STATE BARU UNTUK ULASAN DARI API ---
     const [reviews, setReviews] = useState<ApiReview[]>([]);
     const [reviewsLoading, setReviewsLoading] = useState(true);
 
@@ -428,9 +425,9 @@ export default function DetailScreen() {
     const [selectedDuration, setSelectedDuration] = useState<number>(MIN_DURATION);
     const [newRating, setNewRating] = useState(0);
     const [newComment, setNewComment] = useState('');
-    const [isSubmittingReview, setIsSubmittingReview] = useState(false); // <-- State loading baru
+    const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
-    // --- 8. FUNGSI BARU UNTUK FETCH ULASAN ---
+    // --- Fungsi Fetch Ulasan ---
     const fetchReviews = useCallback(async () => {
       if (!productId) return;
       setReviewsLoading(true);
@@ -439,7 +436,6 @@ export default function DetailScreen() {
         setReviews(response.data);
       } catch (err) {
         console.error("Failed to fetch reviews:", err);
-        // Tidak perlu alert, cukup tampilkan 'Belum ada ulasan'
       } finally {
         setReviewsLoading(false);
       }
@@ -458,11 +454,9 @@ export default function DetailScreen() {
                 setIsLoading(true);
                 setError(null);
                 
-                // 1. Ambil data produk
                 const response = await apiClient.get(`/products/${productId}`);
                 setProduct(response.data);
                 
-                // 2. Ambil data ulasan
                 await fetchReviews();
 
             } catch (err: any) {
@@ -480,11 +474,10 @@ export default function DetailScreen() {
         };
 
         fetchProductDetails();
-    }, [productId, fetchReviews]); // <-- Tambahkan fetchReviews
+    }, [productId, fetchReviews]);
 
     // --- Memoized Values ---
-    // HAPUS: allItemReviews & displayedReviews yang lama
-    const displayedReviews = useMemo(() => reviews.slice(0, 2), [reviews]); // <-- Tampilkan 2 ulasan terbaru
+    const displayedReviews = useMemo(() => reviews.slice(0, 2), [reviews]);
     const isLiked = useMemo(() => {
         return product ? likedIds.includes(product.id) : false;
     }, [product, likedIds]);
@@ -520,13 +513,19 @@ export default function DetailScreen() {
         }
     }, [product, toggleLike, isLoggedIn, promptLogin]);
 
+    // =================================================================
+    // === 🚀 [PERBAIKAN 2] Kirim 1 argumen (product) ke addToCart
+    // =================================================================
     const handleAddToCart = useCallback(async () => {
         if (!isLoggedIn) { promptLogin(); return; }
         if (!product) return;
         try {
-            const added = await addToCart(product);
+            // [FIX] Panggil addToCart hanya dengan 'product'.
+            // Context Anda akan menangani durasi default (1).
+            const added = await addToCart(product); 
+            
             if (added) {
-                Alert.alert('Ditambahkan', `${product.name} berhasil ditambahkan ke keranjang.`);
+                Alert.alert('Ditambahkan', `${product.name} (durasi 1 hari) berhasil ditambahkan ke keranjang.`);
             } else {
                 Alert.alert('Sudah di Keranjang', `${product.name} sudah ada. Lihat keranjang?`, [
                     { text: 'Tidak', style: 'cancel' },
@@ -539,7 +538,6 @@ export default function DetailScreen() {
         }
     }, [product, addToCart, navigation, isLoggedIn, promptLogin]);
 
-    // --- 9. SESUAIKAN FUNGSI SUBMIT ULASAN ---
     const handleSubmitReview = useCallback(async () => {
         if (!isLoggedIn) { promptLogin(); return; }
         if (!product) return;
@@ -550,18 +548,15 @@ export default function DetailScreen() {
         
         setIsSubmittingReview(true);
         try {
-            // Panggil API POST baru kita
             await apiClient.post(`/products/${product.id}/reviews`, {
               rating: newRating,
               comment: newComment.trim()
             });
 
-            // Reset form
             setNewRating(0);
             setNewComment('');
             Alert.alert('Ulasan Terkirim', 'Terima kasih atas ulasan Anda!');
             
-            // Ambil ulang data ulasan DAN data produk (untuk update rating kumulatif)
             await fetchReviews();
             const productResponse = await apiClient.get(`/products/${productId}`);
             setProduct(productResponse.data);
@@ -575,10 +570,10 @@ export default function DetailScreen() {
         }
     }, [product, newRating, newComment, isLoggedIn, promptLogin, fetchReviews, productId]);
 
-    // Modal & Checkout Handlers (Sudah Benar)
+    // Modal & Checkout Handlers
     const openDurationModal = useCallback(() => {
         if (!isLoggedIn) { promptLogin(); return; }
-        setSelectedDuration(MIN_DURATION);
+        setSelectedDuration(MIN_DURATION); // Selalu reset ke 1 saat modal dibuka
         setIsDurationModalVisible(true);
     }, [isLoggedIn, promptLogin]);
     
@@ -594,17 +589,22 @@ export default function DetailScreen() {
         }
         
         closeDurationModal();
+        
         const itemToCheckout = mapApiProductToCheckoutItem(product, selectedDuration, productImageUri);
-        navigation.navigate('Checkout', { items: [itemToCheckout] });
+        
+        // Kirim array (sudah benar dari perbaikan sebelumnya)
+        const itemsArray = [itemToCheckout];
+        navigation.navigate('Checkout', { items: itemsArray });
+
     }, [product, selectedDuration, productImageUri, navigation, closeDurationModal]);
     
-    // Navigation Handlers (Sudah Benar)
+    // Navigation Handlers
     const handleGoBack = useCallback(() => navigation.goBack(), [navigation]);
     
     const handleViewAllReviews = useCallback(() => {
         if (!product) return;
         navigation.navigate('AllReviews', { 
-          itemId: product.id, // <-- 'itemId' sekarang adalah 'productId'
+          itemId: product.id, 
           productName: product.name 
         });
     }, [navigation, product]);
@@ -692,9 +692,9 @@ export default function DetailScreen() {
                     <View style={styles.divider} />
 
                     <ReviewList
-                        reviews={displayedReviews} // <-- Gunakan state 'reviews'
-                        allReviewsCount={reviews.length} // <-- Hitung dari 'reviews'
-                        isLoading={reviewsLoading} // <-- Gunakan state loading ulasan
+                        reviews={displayedReviews}
+                        allReviewsCount={reviews.length}
+                        isLoading={reviewsLoading}
                         onViewAll={handleViewAllReviews}
                     />
 
@@ -704,10 +704,10 @@ export default function DetailScreen() {
                     <AddReviewForm
                         rating={newRating}
                         comment={newComment}
-                        isSubmitting={isSubmittingReview} // <-- Kirim state loading
+                        isSubmitting={isSubmittingReview}
                         onRatingChange={setNewRating}
                         onCommentChange={setNewComment}
-                        onSubmit={handleSubmitReview} // <-- Hubungkan ke fungsi baru
+                        onSubmit={handleSubmitReview}
                     />
                 </View>
             </ScrollView>

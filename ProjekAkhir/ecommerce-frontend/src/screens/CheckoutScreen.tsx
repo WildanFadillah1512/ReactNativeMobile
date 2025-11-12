@@ -12,16 +12,18 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-// --- 1. PERBAIKI IMPOR ---
-import type { RootStackParamList, Address } from '../navigation/types'; // <-- Impor 'Address' dari sini
-import { useAddress } from '../context/AddressContext';
-import type { CheckoutRentalItem } from '../types'; // <-- Impor sisanya dari sini
+// --- 1. IMPOR SUDAH BENAR ---
+import type { RootStackParamList, Address } from '../navigation/types'; // Impor Address dari types
+import { useAddress} from '../context/AddressContext';
+import type { CheckoutRentalItem } from '../types';
+import { useCart } from '../context/CartContext';
+import apiClient from '../config/api';
 import { parsePrice, formatCurrency } from '../utils/riceParse';
 import { COLORS } from '../config/theme';
 
 type CheckoutScreenProps = NativeStackScreenProps<RootStackParamList, 'Checkout'>;
 
-// (vaOptions dan eWalletOptions tetap sama)
+// (Opsi pembayaran tetap sama)
 const vaOptions = [
   { id: 'bca', name: 'BCA Virtual Account' },
   { id: 'mandiri', name: 'Mandiri Virtual Account' },
@@ -37,12 +39,16 @@ const eWalletOptions = [
 
 
 export default function CheckoutScreen({ route, navigation }: CheckoutScreenProps) {
-  const { items, selectedAddressId: initialSelectedAddressId } = route.params as {
+  // --- [PERBAIKAN] Beri nilai default array kosong untuk 'items' ---
+  const { items = [], selectedAddressId: initialSelectedAddressId } = route.params as {
     items: CheckoutRentalItem[];
     selectedAddressId?: number;
   };
 
   const { loading, getAddressById } = useAddress();
+  
+  // --- 2. [PERBAIKAN] Hapus typo '_' ---
+  const { clearCart } = useCart(); 
 
   // === STATE ===
   const [selectedAddressId, setSelectedAddressId] = useState<number | undefined>(
@@ -50,6 +56,8 @@ export default function CheckoutScreen({ route, navigation }: CheckoutScreenProp
   );
   const [paymentMethod, setPaymentMethod] = useState<'va' | 'ewallet'>('va');
   const [selectedOption, setSelectedOption] = useState<string>('bca');
+  
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   // === Update alamat ketika kembali dari AddressScreen ===
   useEffect(() => {
@@ -59,7 +67,6 @@ export default function CheckoutScreen({ route, navigation }: CheckoutScreenProp
   }, [route.params?.selectedAddressId]);
 
   // === Ambil detail alamat ===
-  // (Variabel ini sekarang akan memiliki tipe 'Address' yang benar)
   const selectedAddress: Address | undefined = useMemo(() => {
     return selectedAddressId ? getAddressById(selectedAddressId) : undefined;
   }, [selectedAddressId, getAddressById]);
@@ -71,6 +78,7 @@ export default function CheckoutScreen({ route, navigation }: CheckoutScreenProp
   // === Perhitungan total semua item ===
   const { subtotal, totalCost } = useMemo(() => {
     let totalSub = 0;
+    // (Pengecekan 'Array.isArray' tidak lagi diperlukan karena nilai default di 'route.params')
     items.forEach((it) => {
       const pPerUnit = parsePrice(it.price);
       totalSub += pPerUnit * it.duration;
@@ -87,22 +95,41 @@ export default function CheckoutScreen({ route, navigation }: CheckoutScreenProp
       setSelectedOption(eWalletOptions[0].id);
   };
 
-  // === Konfirmasi pesanan ===
-  const handleConfirmOrder = () => {
+  // ================================================================
+  // === 🚀 [PERBAIKAN] Konfirmasi pesanan (Memanggil API) ===
+  // ================================================================
+  const handleConfirmOrder = async () => {
     if (!selectedAddress) {
       Alert.alert('Alamat Belum Dipilih', 'Silakan pilih alamat pengiriman terlebih dahulu.');
       return;
     }
+    
+    setIsCheckingOut(true); // Mulai loading
 
-    console.log('✅ Order Confirmed:', {
-      items,
-      selectedAddress,
-      paymentMethod,
-      selectedOption,
-      totalCost,
-    });
+    try {
+      // --- 3. [PERBAIKAN] Panggil endpoint API yang benar ---
+  const response = await apiClient.post('/checkout', {
+    addressJson: selectedAddress,
+    totalPrice: totalCost,
+    items: items.map((item) => ({
+      id: item.id,
+      duration: item.duration,
+    })),
+  });
 
-    navigation.navigate('Success');
+      if (response.status === 201) {
+        await clearCart(); 
+        navigation.navigate('Success');
+      } else {
+        Alert.alert("Checkout Gagal", response.data.message || "Terjadi kesalahan yang tidak diketahui.");
+      }
+    } catch (error: any) {
+      console.error("Checkout failed:", error);
+      const message = error.response?.data?.message || "Terjadi kesalahan. Silakan coba lagi.";
+      Alert.alert("Checkout Gagal", message);
+    } finally {
+      setIsCheckingOut(false); // Selesai loading
+    }
   };
 
   if (loading) {
@@ -117,7 +144,6 @@ export default function CheckoutScreen({ route, navigation }: CheckoutScreenProp
   }
 
   return (
-    // Hapus 'edges' prop untuk menghindari error TypeScript
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
@@ -129,7 +155,7 @@ export default function CheckoutScreen({ route, navigation }: CheckoutScreenProp
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Barang Sewaan (Sudah Benar) */}
+        {/* Barang Sewaan */}
         <Text style={styles.sectionTitle}>Barang Sewaan</Text>
         {items.map((it) => (
           <View key={it.id} style={styles.itemSummaryCard}>
@@ -170,7 +196,6 @@ export default function CheckoutScreen({ route, navigation }: CheckoutScreenProp
                   />
                 </View>
               </View>
-              {/* --- 2. PERBAIKI RENDER ALAMAT --- */}
               <View style={styles.addressBody}>
                 <Text style={styles.addressName}>{selectedAddress.receiverName}</Text>
                 <Text style={styles.addressDetail}>{selectedAddress.phone}</Text>
@@ -189,7 +214,7 @@ export default function CheckoutScreen({ route, navigation }: CheckoutScreenProp
           )}
         </TouchableOpacity>
 
-        {/* Metode Pembayaran (Sudah Benar) */}
+        {/* Metode Pembayaran */}
         <Text style={styles.sectionTitle}>Metode Pembayaran</Text>
         <View style={styles.paymentOptions}>
           <TouchableOpacity
@@ -205,7 +230,6 @@ export default function CheckoutScreen({ route, navigation }: CheckoutScreenProp
               Virtual Account
             </Text>
           </TouchableOpacity>
-
           <TouchableOpacity
             style={[styles.paymentButton, paymentMethod === 'ewallet' && styles.paymentActive]}
             onPress={() => handlePaymentMethodChange('ewallet')}
@@ -223,7 +247,7 @@ export default function CheckoutScreen({ route, navigation }: CheckoutScreenProp
           </TouchableOpacity>
         </View>
 
-        {/* List Opsi Pembayaran (Sudah Benar) */}
+        {/* List Opsi Pembayaran */}
         <View style={styles.paymentListContainer}>
           {(paymentMethod === 'va' ? vaOptions : eWalletOptions).map((option) => (
             <TouchableOpacity
@@ -241,7 +265,7 @@ export default function CheckoutScreen({ route, navigation }: CheckoutScreenProp
           ))}
         </View>
 
-        {/* Rincian Biaya (Sudah Benar) */}
+        {/* Rincian Biaya */}
         <Text style={styles.sectionTitle}>Rincian Biaya</Text>
         <View style={styles.costDetailsCard}>
           <View style={styles.costRow}>
@@ -264,25 +288,34 @@ export default function CheckoutScreen({ route, navigation }: CheckoutScreenProp
         </View>
       </ScrollView>
 
-      {/* Footer (Sudah Benar) */}
+      {/* Footer */}
       <View style={styles.footer}>
         <View style={styles.footerPriceInfo}>
           <Text style={styles.footerTotalLabel}>Total Bayar</Text>
           <Text style={styles.footerTotalValue}>{formatCurrency(totalCost)}</Text>
         </View>
+        
+        {/* Tombol Konfirmasi Dinamis */}
         <TouchableOpacity
-          style={[styles.confirmButton, !selectedAddress && styles.confirmButtonDisabled]}
+          style={[
+            styles.confirmButton, 
+            (!selectedAddress || isCheckingOut) && styles.confirmButtonDisabled
+          ]}
           onPress={handleConfirmOrder}
-          disabled={!selectedAddress}
+          disabled={!selectedAddress || isCheckingOut}
         >
-          <Text style={styles.confirmButtonText}>Konfirmasi & Bayar</Text>
+          {isCheckingOut ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text style={styles.confirmButtonText}>Konfirmasi & Bayar</Text>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 }
 
-// Styles (Sudah Benar, gunakan versi yang ada di file Anda)
+// Styles
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -293,16 +326,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 16,
     borderBottomWidth: 1,
-    borderColor: COLORS.card, // <-- Seharusnya 'COLORS.border'
+    borderColor: COLORS.border,
   },
-  backButton: { width: 40, height: 40, justifyContent: 'center' }, // <-- 'size: 20' di header
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: COLORS.textPrimary }, // <-- '600'
+  backButton: { width: 40, height: 40, justifyContent: 'center' },
+  headerTitle: { fontSize: 18, fontWeight: '600', color: COLORS.textPrimary },
   headerSpacer: { width: 40 },
   scrollContent: { padding: 16, paddingBottom: 24 },
   sectionTitle: {
     color: COLORS.textPrimary,
     fontSize: 16,
-    fontWeight: 'bold', // <-- '600'
+    fontWeight: '600',
     marginBottom: 12,
     marginTop: 16,
   },
@@ -315,7 +348,7 @@ const styles = StyleSheet.create({
   },
   itemImage: { width: 70, height: 70, borderRadius: 8, marginRight: 12 },
   itemDetails: { flex: 1, justifyContent: 'center' },
-  itemName: { color: COLORS.textPrimary, fontSize: 15, fontWeight: 'bold' }, // <-- '600'
+  itemName: { color: COLORS.textPrimary, fontSize: 15, fontWeight: '600' },
   itemLocation: { color: COLORS.textMuted, fontSize: 12, marginTop: 4 },
   itemPrice: { color: COLORS.primary, fontSize: 13, fontWeight: '600', marginTop: 8 },
   addressCard: {
@@ -335,7 +368,7 @@ const styles = StyleSheet.create({
   changeButtonText: { color: COLORS.primary, fontSize: 14, fontWeight: '600' },
   changeIcon: { marginLeft: 4 },
   addressBody: { marginTop: 4 },
-  addressName: { color: COLORS.textPrimary, fontSize: 14, fontWeight: 'bold' }, // <-- '600'
+  addressName: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '600' },
   addressDetail: { color: COLORS.textSecondary, fontSize: 13, lineHeight: 19 },
   addressPlaceholder: {
     flexDirection: 'row',
@@ -385,19 +418,19 @@ const styles = StyleSheet.create({
   costLabel: { color: COLORS.textSecondary, fontSize: 14 },
   costValue: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '500' },
   divider: { height: 1, backgroundColor: COLORS.border, marginVertical: 10 },
-  totalLabel: { color: COLORS.textPrimary, fontSize: 16, fontWeight: 'bold' }, // <-- '600'
-  totalValue: { color: COLORS.primary, fontSize: 16, fontWeight: 'bold' }, // <-- '600'
+  totalLabel: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '600' },
+  totalValue: { color: COLORS.primary, fontSize: 16, fontWeight: '600' },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     borderTopWidth: 1,
-    borderColor: COLORS.card, // <-- Seharusnya 'COLORS.border'
-    backgroundColor: COLORS.background, // <-- Seharusnya 'COLORS.card'
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
   },
   footerPriceInfo: { flex: 1, marginRight: 10 },
   footerTotalLabel: { color: COLORS.textMuted, fontSize: 12, marginBottom: 2 },
-  footerTotalValue: { color: COLORS.textPrimary, fontSize: 18, fontWeight: 'bold' }, // <-- '600'
+  footerTotalValue: { color: COLORS.textPrimary, fontSize: 18, fontWeight: '600' },
   confirmButton: {
     backgroundColor: COLORS.primary,
     paddingVertical: 14,
@@ -406,6 +439,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexShrink: 1,
   },
-  confirmButtonDisabled: { backgroundColor: COLORS.border, opacity: 0.7 },
-  confirmButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' }, // <-- '600'
+  confirmButtonDisabled: { backgroundColor: COLORS.textMuted, opacity: 0.7 },
+  confirmButtonText: { color: 'white', fontSize: 16, fontWeight: '600' },
 });

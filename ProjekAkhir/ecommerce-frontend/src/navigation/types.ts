@@ -15,7 +15,7 @@ export type Address = {
   province: string;
   postalCode: string;
   isPrimary: boolean;
-  createdAt: string; // Prisma mengembalikan DateTime sebagai string ISO
+  createdAt: string; 
   userId: number;
 };
 
@@ -62,21 +62,28 @@ export type RootStackParamList = {
   };
   SellerProfile: { seller: ApiSeller };
   AllReviews: { 
-    itemId: number; // <-- Ini adalah 'productId'
+    itemId: number; 
     productName: string 
   };
   
-  // --- 5. TAMBAHAN BARU UNTUK FITUR ULASAN ---
   TulisUlasan: {
     productId: number;
     productName: string;
   };
-  // -----------------------------------------
   
   Saved: undefined;
   Cart: undefined;
+  
+  // --- [BARU] Ditambahkan untuk Riwayat Sewa ---
+  RentalHistory: undefined; 
+  
   SearchHistory: undefined;
-  SearchResults: { query: string };
+  SearchResults: { 
+    query?: string;
+    categoryId?: number;
+    categoryName?: string;
+  };
+  // -------------------------
 };
 
 

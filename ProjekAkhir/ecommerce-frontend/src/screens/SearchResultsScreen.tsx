@@ -5,15 +5,15 @@ import {
     FlatList,
     Modal, Pressable, TextInput,
     ActivityIndicator,
-    Alert, // <-- 1. TAMBAHKAN Alert
+    Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { useRoute, type RouteProp, useNavigation } from '@react-navigation/native';
-import type { RootStackParamList, RootStackNavigationProp } from '../navigation/types';
+// Tipe navigasi Anda sudah benar di sini
+import type { RootStackParamList, RootStackNavigationProp } from '../navigation/types'; 
 import type { ApiProduct, ApiSeller } from '../types';
 import { COLORS } from '../config/theme';
-// --- 2. IMPOR apiClient ---
 import apiClient, { BASE_URL } from '../config/api';
 
 // (Helper: SORT_OPTIONS, RATING_OPTIONS, buildImageUri, formatPrice, getCategoryInfo, formatToRupiah, parseRupiah SUDAH BENAR)
@@ -64,27 +64,19 @@ const parseRupiah = (rupiah: string): number | null => {
 type SearchResultsRouteProp = RouteProp<RootStackParamList, 'SearchResults'>;
 type SortOptionId = 'relevan' | 'hargaAsc' | 'hargaDesc' | 'ratingDesc';
 
-// ================================================================
-// 🧩 INTERNAL TYPES
-// ================================================================
-// --- 3. HAPUS TIPE 'ExtendedProduct' (Tidak perlu lagi) ---
-// Tipe 'ApiProduct' dari '../types' sudah memiliki 'ratingAvg' & 'reviewsCount'
+// (Tipe ExtendedProduct sudah dihapus, ini benar)
 
 // ================================================================
 // 🧩 KOMPONEN-KOMPONEN KECIL (PRESENTATIONAL)
 // ================================================================
 
 // ----------------------------------------------------------------
-// Komponen Kartu Produk
+// Komponen Kartu Produk (Sudah Benar)
 // ----------------------------------------------------------------
-// --- 4. GANTI 'ExtendedProduct' MENJADI 'ApiProduct' ---
 type ProductCardProps = { item: ApiProduct; onPress: () => void };
 const ProductCard: React.FC<ProductCardProps> = React.memo(({ item, onPress }) => {
     const { icon, color } = getCategoryInfo(item.category);
     const imageUrl = buildImageUri(item.imageUrl);
-
-    // --- 5. PERBAIKI LOGIKA RATING & REVIEW ---
-    // Gunakan 'ratingAvg' & 'reviewsCount' langsung dari 'ApiProduct'
     const displayRating = item.ratingAvg ?? null;
     const displayCount = item.reviewsCount ?? null;
 
@@ -164,7 +156,7 @@ const ShopCard: React.FC<ShopCardProps> = React.memo(({ shop, onPress }) => {
              </View>
              <Icon name="chevron-right" size={14} color={COLORS.textMuted} style={styles.shopArrow} />
         </TouchableOpacity>
-     );
+      );
 });
 
 // ----------------------------------------------------------------
@@ -394,12 +386,13 @@ export default function SearchResultsScreen() {
     const route = useRoute<SearchResultsRouteProp>();
     
     // --- State ---
-    const [searchQuery, setSearchQuery] = useState(route.params.query);
-    const [submittedQuery, setSubmittedQuery] = useState(route.params.query);
+    // --- PERBAIKAN A: Beri nilai default string kosong ('') jika param query undefined ---
+    const [searchQuery, setSearchQuery] = useState(route.params.query ?? '');
+    const [submittedQuery, setSubmittedQuery] = useState(route.params.query ?? '');
+    
     const [activeTab, setActiveTab] = useState<'produk' | 'toko'>('produk');
     
     // Data state
-    // --- 6. GANTI 'ExtendedProduct' MENJADI 'ApiProduct' ---
     const [allProducts, setAllProducts] = useState<ApiProduct[]>([]);
     const [allSellers, setAllSellers] = useState<ApiSeller[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -426,17 +419,16 @@ export default function SearchResultsScreen() {
     const [appliedMaxPrice, setAppliedMaxPrice] = useState<number | null>(null);
     const [appliedMinRating, setAppliedMinRating] = useState<number | null>(null);
 
-    // --- 7. SESUAIKAN DATA FETCHING (HAPUS LOGIKA MANUAL RATING) ---
+    // --- Data Fetching ---
     useEffect(() => {
         const fetchData = async () => {
             setIsLoading(true);
             setError(null);
             try {
-                // Ganti 'fetch' dengan 'apiClient'
                 const response = await apiClient.get('/products');
                 
-                const products: ApiProduct[] = response.data;
-                // 'products' sudah berisi 'ratingAvg' dan 'reviewsCount' dari API
+                // --- PERBAIKAN B (Logic Bug): Ekstrak array dari 'response.data.products' ---
+                const products: ApiProduct[] = response.data.products || []; 
                 setAllProducts(products);
 
                 // Ekstrak seller unik (Logika ini sudah benar)
@@ -448,10 +440,9 @@ export default function SearchResultsScreen() {
                 });
                 setAllSellers(Array.from(sellerMap.values()));
 
-            } catch (err: any) { // <-- Tipe 'err' sebagai 'any'
+            } catch (err: any) {
                 console.error("Failed to fetch data:", err);
                 const message = err.response?.data?.message || err.message || "Gagal memuat data.";
-                // Tampilkan Alert jika ada error
                 if (err.code === 'ERR_NETWORK') {
                     Alert.alert("Error Koneksi", `Tidak dapat terhubung ke server.\nPastikan server backend (${BASE_URL}) berjalan.`);
                 } else {
@@ -466,7 +457,6 @@ export default function SearchResultsScreen() {
     }, []); // Hanya fetch sekali saat mount
 
     // --- Memoized Logic (Filtering & Sorting) ---
-    // (availableCategories, availableLocations, overallMinPrice/MaxPrice sudah benar)
     const availableCategories = useMemo(() => Array.from(new Set(allProducts.map(p => p.category).filter(Boolean) as string[])), [allProducts]);
     const availableLocations = useMemo(() => Array.from(new Set(allProducts.map(p => p.location).filter(Boolean) as string[])), [allProducts]);
     const { overallMinPrice, overallMaxPrice } = useMemo(() => {
@@ -476,29 +466,43 @@ export default function SearchResultsScreen() {
         return { overallMinPrice: Math.min(...prices), overallMaxPrice: Math.max(...prices) };
     }, [allProducts]);
 
-    // 1. Filter by query (Sudah Benar)
+    // 1. Filter by query
     const queryFilteredResults = useMemo(() => {
         const lowerCaseQuery = submittedQuery.toLowerCase().trim();
-        if (!lowerCaseQuery) return allProducts;
-        return allProducts.filter(item =>
-            item.name.toLowerCase().includes(lowerCaseQuery) ||
-            (item.description && item.description.toLowerCase().includes(lowerCaseQuery)) ||
-            (item.category && item.category.toLowerCase().includes(lowerCaseQuery)) ||
-            (item.location && item.location.toLowerCase().includes(lowerCaseQuery))
-        );
-    }, [submittedQuery, allProducts]);
+        
+        // --- PERBAIKAN C (Error 'categoryId'): Gunakan 'categoryName' dari route params ---
+        const categoryNameFilter = route.params.categoryName;
 
-    // 2. Filter by applied filters & Sort
+        if (!lowerCaseQuery && !categoryNameFilter) {
+            return allProducts; // Tampilkan semua jika tidak ada query atau filter kategori
+        }
+
+        return allProducts.filter(item => {
+            // Cek filter Kategori dari Navigasi (ExploreScreen)
+            const categoryMatch = !categoryNameFilter || item.category === categoryNameFilter;
+
+            // Cek filter Query Teks (Search Bar)
+            const queryMatch = !lowerCaseQuery || (
+                item.name.toLowerCase().includes(lowerCaseQuery) ||
+                (item.description && item.description.toLowerCase().includes(lowerCaseQuery)) ||
+                (item.category && item.category.toLowerCase().includes(lowerCaseQuery)) ||
+                (item.location && item.location.toLowerCase().includes(lowerCaseQuery))
+            );
+            
+            return categoryMatch && queryMatch;
+        });
+    // --- PERBAIKAN C (lanjutan): Update dependency array ---
+    }, [submittedQuery, allProducts, route.params.categoryName]);
+
+    // 2. Filter by applied filters & Sort (Logika sorting sudah benar)
     const displayedProducts = useMemo(() => {
         let items = queryFilteredResults.filter(item => {
-            // --- 8. GUNAKAN 'ratingAvg' ---
             const ratingValue = item.ratingAvg ?? 0; 
             return (
                 (appliedSelectedCategories.length === 0 || (item.category && appliedSelectedCategories.includes(item.category))) &&
                 (appliedLocations.length === 0 || (item.location && appliedLocations.includes(item.location))) &&
                 (appliedMinPrice === null || item.price >= appliedMinPrice) &&
                 (appliedMaxPrice === null || item.price <= appliedMaxPrice) &&
-                // --- 9. GUNAKAN 'ratingValue' ---
                 (appliedMinRating === null || ratingValue >= appliedMinRating)
             );
         });
@@ -508,7 +512,6 @@ export default function SearchResultsScreen() {
             switch (selectedSort) {
                 case 'hargaAsc': items.sort((a, b) => a.price - b.price); break;
                 case 'hargaDesc': items.sort((a, b) => b.price - a.price); break;
-                // --- 10. GUNAKAN 'ratingAvg' UNTUK SORTIR ---
                 case 'ratingDesc': items.sort((a, b) => (b.ratingAvg ?? 0) - (a.ratingAvg ?? 0)); break;
             }
         }
@@ -564,7 +567,6 @@ export default function SearchResultsScreen() {
         }
     }, [searchQuery]);
 
-    // --- 11. GANTI 'ExtendedProduct' MENJADI 'ApiProduct' ---
     const handleNavigateToDetail = useCallback((item: ApiProduct) => {
         navigation.navigate('Detail', { productId: item.id });
     }, [navigation]);
@@ -580,6 +582,7 @@ export default function SearchResultsScreen() {
     
     
     // --- Render Logic ---
+    // (headerProps sekarang aman dari error 'undefined')
     const headerProps = {
         query: searchQuery,
         submittedQuery: submittedQuery,
@@ -633,11 +636,10 @@ export default function SearchResultsScreen() {
                     contentContainerStyle={styles.gridContainer}
                     ListEmptyComponent={<NoResultsView query={submittedQuery} />}
                     initialNumToRender={6}
-                    // --- 12. TAMBAHKAN columnWrapperStyle ---
                     columnWrapperStyle={styles.listColumnWrapper} 
                 />
             ) : (
-                <FlatList // <-- Ganti ScrollView -> FlatList untuk performa
+                <FlatList 
                     data={filteredShops}
                     renderItem={({ item }) => <ShopCard shop={item} onPress={() => handleNavigateToShop(item)} />}
                     keyExtractor={item => `shop-${item.id.toString()}`}
@@ -681,7 +683,9 @@ export default function SearchResultsScreen() {
     );
 }
 
-
+// ================================================================
+// STYLES
+// ================================================================
 const styles = StyleSheet.create({
     
     // ================================================================
@@ -1181,8 +1185,7 @@ const styles = StyleSheet.create({
     // 12. FILTER MODAL - SCROLL CONTENT
     // ================================================================
     filterScroll: {
-        flex: 1,
-        paddingVertical: 8,
+        // biarkan ukurannya natural
     },
     
     filterScrollSpacer: {
